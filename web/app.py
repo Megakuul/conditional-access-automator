@@ -1,4 +1,5 @@
-from flask import Flask, render_template, redirect, url_for, request, make_response
+from flask import Flask, render_template, redirect, url_for, request, make_response, flash
+
 import msal
 import time  # Import time module
 import base64
@@ -16,6 +17,24 @@ CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 AUTHORITY = os.getenv('AUTHORITY')
 REDIRECT_URI = 'http://localhost:5000/api/auth/callback'
 SCOPE = ['Policy.ReadWrite.ConditionalAccess', 'Policy.Read.All']
+
+
+# Error handling
+@app.errorhandler(404)
+def not_found_error(error):
+    flash('Error 404: Page not found', 'error')
+    return redirect(url_for('home'))
+
+@app.errorhandler(500)
+def internal_error(error):
+    flash('Error 500: Internal server error', 'error')
+    return redirect(url_for('home'))
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    flash(f"An error occurred: {str(error)}", 'error')
+    return redirect(url_for('home'))
+
 
 @app.route('/')
 def home():
@@ -47,15 +66,21 @@ def logout():
 def authorized():
     flow_cookie = request.cookies.get('flow')
     if not flow_cookie:
+        flash('Login failed: Flow cookie is missing', 'error')
         return redirect(url_for('login'))
 
-    cache = _load_cache()
-    result = _build_msal_app(cache=cache).acquire_token_by_auth_code_flow(
-        eval(flow_cookie), request.args
-    )
+    try:
+        cache = _load_cache()
+        result = _build_msal_app(cache=cache).acquire_token_by_auth_code_flow(
+            eval(flow_cookie), request.args
+        )
+    except Exception as e:
+        flash(f"Authorization error: {str(e)}", 'error')
+        return redirect(url_for('login'))
 
     if 'error' in result:
-        return "Login failure: " + result.get('error_description')
+        flash(f"Login failure: {result.get('error_description')}", 'error')
+        return redirect(url_for('login'))
 
     access_token = result['access_token']
     expires_in = result.get('expires_in')  # Lifetime in seconds
@@ -77,128 +102,98 @@ def fetch_conditional_access():
     expiration_timestamp = request.cookies.get('access_token_exp')
 
     if not access_token or not expiration_timestamp:
+        flash('Authorization expired or missing. Please login again.', 'error')
         return redirect(url_for('login'))
 
-    # URL from environment variable
     templates_url = os.getenv('TEMPLATES_API_URL')
 
     if not templates_url:
-        return "Templates API URL is not configured."
+        flash('Templates API URL is not configured.', 'error')
+        return redirect(url_for('home'))
 
-    # Send GET request with cookies (access token and expiration timestamp)
     cookies = {
         'access_token': access_token,
         'access_token_exp': expiration_timestamp
     }
 
-    print(cookies)
-
     try:
-        # Make the request with cookies
         response = requests.get(templates_url, cookies=cookies)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        return f"Error fetching templates: {str(e)}"
+        flash(f"Error fetching templates: {str(e)}", 'error')
+        return redirect(url_for('home'))
 
-    # Parse JSON response
     response_data = response.json()
 
-    # Decode base64 encoded templates
     decoded_templates = {}
     for key, value in response_data.items():
-        print("Value: ", value)
-
         if isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
-            # Extract the string from the list if it's a list with one element
             value = value[0]
         
-        if isinstance(value, str):  # Ensure that the value is a string before decoding
+        if isinstance(value, str):
             try:
                 decoded_templates[key] = base64.urlsafe_b64decode(value).decode('utf-8')
             except Exception as e:
-                return f"Error decoding template for key '{key}': {str(e)}"
-        else:
-            print(f"Skipping key '{key}' because its value is not a valid string or list (type: {type(value)})")
+                flash(f"Error decoding template for key '{key}': {str(e)}", 'error')
+                return redirect(url_for('home'))
 
-
-    # Save decoded templates in a variable
     templates_variable = decoded_templates
-
-    # Print or return the decoded templates for debugging purposes
-    print("Decoded templates:", templates_variable)
-
     return "Templates fetched and decoded successfully."
 
 
+@app.route('/api/apply/<template_data>', methods=['GET'])
+def apply_template(template_data):
+    try:
+        decoded_template = base64.urlsafe_b64decode(template_data).decode('utf-8')
+    except Exception as e:
+        flash(f"Error decoding template data: {str(e)}", 'error')
+        return redirect(url_for('home'))
 
-@app.route('/api/apply', methods=['POST'])
-def apply_template():
-    # Extract the JSON data from the request
-    data = request.json
-
-    if 'template' not in data:
-        return "Template not provided in the request body.", 400
-
-    # Encode the 'template' field in base64 URL-safe format
-    encoded_template = base64.urlsafe_b64encode(data['template'].encode('utf-8')).decode('utf-8')
-
-    # URL from environment variable
     apply_url = os.getenv('APPLY_API_URL')
 
     if not apply_url:
-        return "Apply API URL is not configured."
+        flash('Apply API URL is not configured.', 'error')
+        return redirect(url_for('home'))
 
-    # Construct the payload with the encoded template
-    payload = {
-        'template': encoded_template
-    }
+    payload = {'template': decoded_template}
 
     try:
-        # Send POST request with the payload
         response = requests.post(apply_url, json=payload)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        return f"Error applying template: {str(e)}"
+        flash(f"Error applying template: {str(e)}", 'error')
+        return redirect(url_for('home'))
 
-    # Return the success message or data from the apply response
     return response.json()
 
 
-# New route for /format (POST request)
-@app.route('/api/format', methods=['POST'])
-def format_template():
-    # Extract the JSON data from the request
-    data = request.json
+@app.route('/api/format/<template_data>/<format_type>', methods=['GET'])
+def format_template(template_data, format_type):
+    try:
+        decoded_template = base64.urlsafe_b64decode(template_data).decode('utf-8')
+    except Exception as e:
+        flash(f"Error decoding template data: {str(e)}", 'error')
+        return redirect(url_for('home'))
 
-    if 'template' not in data or 'format' not in data:
-        return "Both 'template' and 'format' must be provided in the request body.", 400
-
-    # Encode the 'template' field in base64 URL-safe format
-    encoded_template = base64.urlsafe_b64encode(data['template'].encode('utf-8')).decode('utf-8')
-
-    # URL from environment variable
     format_url = os.getenv('FORMAT_API_URL')
 
     if not format_url:
-        return "Format API URL is not configured."
+        flash('Format API URL is not configured.', 'error')
+        return redirect(url_for('home'))
 
-    # Construct the payload with the encoded template and format
     payload = {
-        'template': encoded_template,
-        'format': data['format']
+        'template': decoded_template,
+        'format': format_type
     }
 
     try:
-        # Send POST request with the payload (no cookies needed)
         response = requests.post(format_url, json=payload)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        return f"Error formatting template: {str(e)}"
+        flash(f"Error formatting template: {str(e)}", 'error')
+        return redirect(url_for('home'))
 
-    # Return the formatted string based on the requested format (JSON/YAML, etc.)
     return response.json()
-
-
 
 
 def _build_msal_app(cache=None, authority=None):
@@ -216,12 +211,10 @@ def _build_auth_code_flow(scopes=None, authority=None):
     )
 
 def _load_cache():
-    # Dummy cache function. You can implement a more secure token cache system.
     cache = msal.SerializableTokenCache()
     return cache
 
 def _save_cache(cache):
-    # Dummy cache save function. Can be extended for server-side caching.
     pass
 
 if __name__ == '__main__':
