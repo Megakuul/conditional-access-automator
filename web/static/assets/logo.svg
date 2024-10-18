@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <!-- Abstract Mountain Logo -->
+  <path d="M100 400 L250 100 L400 400 Z"/>
+  
+  <!-- Circular Swirl Logo -->
+  <path d="M250,250 m-150,0 a150,150 0 1,0 300,0 a150,150 0 1,0 -300,0 M250,250 m-100,0 a100,100 0 0,1 200,0 a100,100 0 0,1 -200,0 M250,250 m-50,0 a50,50 0 0,0 100,0 a50,50 0 0,0 -100,0" fill="#000000" />
+  
+  <!-- Leaf Logo -->
+  <path d="M250,100 Q400,250 250,400 Q100,250 250,100 Z"/>
+  
+  <!-- Abstract Bird Logo -->
+  <path d="M150,300 Q250,100 350,300 L300,350 Q250,300 200,350 Z"/>
+  
+  <!-- Minimalist House Logo -->
+  <path d="M150,300 L250,150 L350,300 Z M200,300 H300 V400 H200 Z"/>
+</svg>
