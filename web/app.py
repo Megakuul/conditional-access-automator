@@ -7,6 +7,11 @@ app = Flask(__name__)
 def home():
     return render_template('index.html')
 
+# Basic route
+@app.route('/form')
+def form():
+    return render_template('form.html')
+
 # Example route with parameter
 @app.route('/greet/<name>')
 def greet(name):
