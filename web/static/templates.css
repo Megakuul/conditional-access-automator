@@ -1,5 +1,194 @@
-.icon:hover:not(.icon-disabled) {
-    transform: scale(1.15);
+/* General styles */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Card styles */
+.card {
+    background-color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    position: relative;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.card-info {
+    color: #4a5568;
+}
+
+.info-icon {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    cursor: pointer;
+    height: 1.5rem;
+    width: 1.5rem;
+    color: #4299e1;
+}
+
+/* Add New Card styles */
+.add-new-card {
+    border: 2px dashed #cbd5e0;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.add-new-card:hover {
+    border-color: #a0aec0;
+}
+
+.add-new-icon {
+    color: #a0aec0;
+    transition: color 0.3s;
+}
+
+.add-new-card:hover .add-new-icon {
+    color: #718096;
+}
+
+.add-new-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Grid layout */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .card-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Popup styles */
+.popup {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.popup-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    width: 100%;
+    max-width: 42rem;
+    height: 75%;
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.popup-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+}
+
+.close-button {
+    color: #718096;
+}
+
+.close-button:hover {
+    color: #4a5568;
+}
+
+.popup-form {
+    flex-grow: 1;
+    overflow: auto;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    color: #4a5568;
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 0.25rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.form-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+}
+
+.popup-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.popup-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Icon styles */
+.icon-button {
+    color: #718096; /* Default gray color for icons */
+}
+
+.icon-button:hover {
+    color: #4a5568; /* Darker gray on hover */
+}
+
+.icon-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .icon {
@@ -7,11 +196,41 @@
     transition: transform 0.15s ease;
 }
 
-.trash-icon:hover {
-    rotate: 5deg;
+.icon:hover:not(.icon-disabled) {
+    transform: scale(1.15);
 }
 
 .trash-icon {
     rotate: 0;
     transition: transform 0.15s ease, rotate 0.15s ease;
+}
+
+.trash-icon:hover {
+    rotate: 5deg;
+}
+
+/* Specific icon colors */
+#swap-view .icon {
+    color: #4299e1; /* Blue color for switch view icon */
+}
+
+#swap-view:hover .icon {
+    color: #2b6cb0; /* Darker blue on hover */
+}
+
+#commit-changes .icon {
+    color: #38a169; /* Green color for checkmark icon */
+}
+
+#commit-changes:hover .icon {
+    color: #2f855a; /* Darker green on hover */
+}
+
+/* Utility classes */
+.blur-sm {
+    filter: blur(4px);
+}
+
+.hidden {
+    display: none;
 }

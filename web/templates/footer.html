@@ -1,3 +1,24 @@
+<div class="container">
+    <!-- Display error messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="fixed top-5 right-5 space-y-4 z-50">
+                {% for category, message in messages %}
+                    <div class="max-w-sm w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md" role="alert">
+                        <div class="flex justify-between items-center">
+                            <span>{{ message }}</span>
+                            <button onclick="this.parentElement.parentElement.remove();" class="text-red-700 focus:outline-none">
+                                <svg class="fill-current h-6 w-6" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path d="M14.348 5.652a1 1 0 10-1.414-1.414L10 7.586 7.066 5.152a1 1 0 10-1.414 1.414L8.586 10l-2.934 2.934a1 1 0 101.414 1.414L10 12.414l2.934 2.934a1 1 0 001.414-1.414L11.414 10l2.934-2.934z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+</div>
 <footer class="text-center text-gray-500 text-xs py-3">
     <p>&copy; 2024 Conditional Access Automator</p>
 </footer>
