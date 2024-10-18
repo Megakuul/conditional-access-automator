@@ -42,7 +42,11 @@ def home():
 
 @app.route('/templates')
 def templates():
+    if 'user' not in session or not session['user'].get('access_token'):
+        #flash('You must be logged in to access this page.', 'error')
+        return redirect(url_for('login'))
     return render_template('templates.html')
+
 
 @app.route('/login')
 def login():
