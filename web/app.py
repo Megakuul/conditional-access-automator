@@ -17,8 +17,12 @@ REDIRECT_URI = 'http://localhost:5000/api/auth/callback'
 SCOPE = ['Policy.ReadWrite.ConditionalAccess', 'Policy.Read.All']
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+def home():
+    return render_template('home.html')
+
+@app.route('/templates')
+def templates():
+    return render_template('templates.html')
 
 @app.route('/login')
 def login():
