@@ -6,10 +6,11 @@
   <title>{% block title %}My Flask App{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='templates.css') }}">
 <!--
   <script defer src="{{ url_for('static', filename='scripts/navigation-animation.js') }}"></script>
   -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='navigation-animation.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='templates.css') }}">
 
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
