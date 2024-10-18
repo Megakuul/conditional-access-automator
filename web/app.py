@@ -1,6 +1,8 @@
 from flask import Flask, render_template, redirect, url_for, request, make_response
 import msal
 import time  # Import time module
+import base64
+import requests
 
 import os
 from dotenv import load_dotenv
@@ -68,18 +70,50 @@ def authorized():
     
     return response
 
+
 @app.route('/api/fetch_conditional_access')
 def fetch_conditional_access():
     access_token = request.cookies.get('access_token')
-    if not access_token:
+    expiration_timestamp = request.cookies.get('access_token_exp')
+
+    if not access_token or not expiration_timestamp:
         return redirect(url_for('login'))
 
-    expiration_timestamp = request.cookies.get('access_token_exp')
-    if expiration_timestamp:
-        print(f"Access token expires at (UNIX timestamp): {expiration_timestamp}")
-    
-    print("Access token:", access_token)
-    return "Access token used in fetch_conditional_access function."
+    # URL from environment variable
+    templates_url = os.getenv('TEMPLATES_API_URL')
+
+    if not templates_url:
+        return "Templates API URL is not configured."
+
+    # Send GET request with cookies (access token and expiration timestamp)
+    cookies = {
+        'access_token': access_token,
+        'access_token_exp': expiration_timestamp
+    }
+
+    try:
+        # Make the request with cookies
+        response = requests.get(templates_url, cookies=cookies)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return f"Error fetching templates: {str(e)}"
+
+    # Parse JSON response
+    response_data = response.json()
+
+    # Decode base64 encoded templates
+    decoded_templates = {}
+    for key, value in response_data.items():
+        decoded_templates[key] = base64.urlsafe_b64decode(value).decode('utf-8')
+
+    # Save decoded templates in a variable
+    templates_variable = decoded_templates
+
+    # Print or return the decoded templates for debugging purposes
+    print("Decoded templates:", templates_variable)
+
+    return "Templates fetched and decoded successfully."
+
 
 @app.route('/api/send_template')
 def send_template():
