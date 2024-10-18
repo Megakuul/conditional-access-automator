@@ -61,11 +61,11 @@ def authorized():
     else:
         print("No 'expires_in' field in token response.")
     
-    return redirect(url_for('fetch_conditional_access'))
+    return redirect(url_for('api/fetch_conditional_access'))
 
 
 
-@app.route('/fetch_conditional_access')
+@app.route('api/fetch_conditional_access')
 def fetch_conditional_access():
     access_token = session.get('access_token', None)
     if not access_token:
@@ -82,6 +82,24 @@ def fetch_conditional_access():
     #TODO: receive templates from go backend, send to frontend
 
     return "Access token used in fetch_conditional_access function."
+
+@app.route('api/send_template')
+def send_template():
+    access_token = session.get('access_token', None)
+    if not access_token:
+        return redirect(url_for('login'))
+    
+    # Retrieve the expiration UNIX timestamp from the session
+    expiration_timestamp = session.get('expiration_timestamp', None)
+    if expiration_timestamp:
+        print(f"Access token expires at (UNIX timestamp): {expiration_timestamp}")
+    
+    # Use the access token in your function
+    print("Access token:", access_token)
+
+    #TODO: send template to go backend
+
+    return "Access token used in send_template function."
 
 
 def _build_msal_app(cache=None, authority=None):
