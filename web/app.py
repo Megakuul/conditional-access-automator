@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, make_response, flash
+from flask import Flask, render_template, redirect, session, url_for, request, make_response, flash
 
 import msal
 import time  # Import time module
@@ -53,21 +53,29 @@ def login():
 
 @app.route('/logout')
 def logout():
+    # Clear the session
+    session.clear()
+
+    # Redirect to Azure AD logout URL
     response = make_response(redirect(
         'https://login.microsoftonline.com/common/oauth2/v2.0/logout' +
-        '?post_logout_redirect_uri=' + url_for('index', _external=True)
+        '?post_logout_redirect_uri=' + url_for('home', _external=True)
     ))
+
+    # Delete any authentication-related cookies
     response.delete_cookie('access_token')
     response.delete_cookie('access_token_exp')
     response.delete_cookie('flow')
+
     return response
+
 
 @app.route('/api/auth/callback')
 def authorized():
     flow_cookie = request.cookies.get('flow')
     if not flow_cookie:
         flash('Login failed: Flow cookie is missing', 'error')
-        return redirect(url_for('login'))
+        return redirect(url_for('home'))
 
     try:
         cache = _load_cache()
@@ -76,15 +84,21 @@ def authorized():
         )
     except Exception as e:
         flash(f"Authorization error: {str(e)}", 'error')
-        return redirect(url_for('login'))
+        return redirect(url_for('home'))
 
     if 'error' in result:
         flash(f"Login failure: {result.get('error_description')}", 'error')
-        return redirect(url_for('login'))
+        return redirect(url_for('home'))
 
     access_token = result['access_token']
     expires_in = result.get('expires_in')  # Lifetime in seconds
     expiration_timestamp = int(time.time()) + int(expires_in) if expires_in else None
+
+    # Store user information in the session
+    session['user'] = {
+        'name': result.get('id_token_claims').get('name'),  # Ensure 'name' field exists
+        'access_token': access_token
+    }
 
     response = make_response(redirect(url_for('fetch_conditional_access')))
     response.set_cookie('access_token', access_token, httponly=True, secure=True)
@@ -92,8 +106,8 @@ def authorized():
         response.set_cookie('access_token_exp', str(expiration_timestamp), httponly=True, secure=True)
 
     _save_cache(cache)
-    
-    return response
+
+    return redirect(url_for('home'))  # Redirect to fetch_conditional_access after success
 
 
 @app.route('/api/fetch_conditional_access')
