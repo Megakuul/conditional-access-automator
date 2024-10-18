@@ -1,0 +1,17 @@
+.icon:hover {
+    transform: scale(1.15);
+}
+
+.icon {
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.trash-icon:hover {
+    rotate: 5deg;
+}
+
+.trash-icon {
+    rotate: 0;
+    transition: transform 0.15s ease, rotate 0.15s ease;
+}
