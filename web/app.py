@@ -1,14 +1,9 @@
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Flask, render_template, redirect, url_for, request, make_response
 import msal
-import requests
-from flask_session import Session  # Import Flask-Session
+import time  # Import time module
 
 app = Flask(__name__)
 app.secret_key = 'your_secure_secret_key'  # Replace with your Flask app's secret key
-
-# Configure server-side session
-app.config['SESSION_TYPE'] = 'filesystem'
-Session(app)
 
 CLIENT_ID = '870ea751-cb49-4c3b-822e-ec31ee665ffa'
 CLIENT_SECRET = 'vTq8Q~arhOxdBKhjKWYxq3K0S5AcPBuZ0FM14aOx'  # Replace with your client secret
@@ -22,85 +17,74 @@ def index():
 
 @app.route('/login')
 def login():
-    session['flow'] = _build_auth_code_flow(scopes=SCOPE)
-    print("Flow initiated:", session['flow'])
-    return redirect(session['flow']['auth_uri'])
+    flow = _build_auth_code_flow(scopes=SCOPE)
+    response = make_response(redirect(flow['auth_uri']))
+    response.set_cookie('flow', str(flow))  # Store flow in a cookie
+    return response
 
 @app.route('/logout')
 def logout():
-    session.clear()
-    return redirect(
+    response = make_response(redirect(
         'https://login.microsoftonline.com/common/oauth2/v2.0/logout' +
         '?post_logout_redirect_uri=' + url_for('index', _external=True)
-    )
-
-
-from datetime import datetime, timedelta
-import time  # Import time module
+    ))
+    response.delete_cookie('access_token')
+    response.delete_cookie('access_token_exp')
+    response.delete_cookie('flow')
+    return response
 
 @app.route('/api/auth/callback')
 def authorized():
-    print("Session flow in callback:", session.get('flow'))
+    flow_cookie = request.cookies.get('flow')
+    if not flow_cookie:
+        return redirect(url_for('login'))
+
     cache = _load_cache()
     result = _build_msal_app(cache=cache).acquire_token_by_auth_code_flow(
-        session.get('flow', {}), request.args
+        eval(flow_cookie), request.args
     )
+
     if 'error' in result:
         return "Login failure: " + result.get('error_description')
-    
-    session['user'] = result.get('id_token_claims')
-    _save_cache(cache)
-    session['access_token'] = result['access_token']
-    
-    # Calculate the expiration UNIX timestamp using 'expires_in'
+
+    access_token = result['access_token']
     expires_in = result.get('expires_in')  # Lifetime in seconds
-    if expires_in:
-        expiration_timestamp = int(time.time()) + int(expires_in)
-        session['expiration_timestamp'] = expiration_timestamp
-        print(f"Access token expires at (UNIX timestamp): {expiration_timestamp}")
-    else:
-        print("No 'expires_in' field in token response.")
+    expiration_timestamp = int(time.time()) + int(expires_in) if expires_in else None
+
+    response = make_response(redirect(url_for('fetch_conditional_access')))
+    response.set_cookie('access_token', access_token, httponly=True, secure=True)
+    if expiration_timestamp:
+        response.set_cookie('access_token_exp', str(expiration_timestamp), httponly=True, secure=True)
+
+    _save_cache(cache)
     
-    return redirect(url_for('api/fetch_conditional_access'))
+    return response
 
-
-
-@app.route('api/fetch_conditional_access')
+@app.route('/api/fetch_conditional_access')
 def fetch_conditional_access():
-    access_token = session.get('access_token', None)
+    access_token = request.cookies.get('access_token')
     if not access_token:
         return redirect(url_for('login'))
-    
-    # Retrieve the expiration UNIX timestamp from the session
-    expiration_timestamp = session.get('expiration_timestamp', None)
+
+    expiration_timestamp = request.cookies.get('access_token_exp')
     if expiration_timestamp:
         print(f"Access token expires at (UNIX timestamp): {expiration_timestamp}")
     
-    # Use the access token in your function
     print("Access token:", access_token)
-
-    #TODO: receive templates from go backend, send to frontend
-
     return "Access token used in fetch_conditional_access function."
 
-@app.route('api/send_template')
+@app.route('/api/send_template')
 def send_template():
-    access_token = session.get('access_token', None)
+    access_token = request.cookies.get('access_token')
     if not access_token:
         return redirect(url_for('login'))
-    
-    # Retrieve the expiration UNIX timestamp from the session
-    expiration_timestamp = session.get('expiration_timestamp', None)
+
+    expiration_timestamp = request.cookies.get('access_token_exp')
     if expiration_timestamp:
         print(f"Access token expires at (UNIX timestamp): {expiration_timestamp}")
-    
-    # Use the access token in your function
+
     print("Access token:", access_token)
-
-    #TODO: send template to go backend
-
     return "Access token used in send_template function."
-
 
 def _build_msal_app(cache=None, authority=None):
     return msal.ConfidentialClientApplication(
@@ -117,14 +101,13 @@ def _build_auth_code_flow(scopes=None, authority=None):
     )
 
 def _load_cache():
+    # Dummy cache function. You can implement a more secure token cache system.
     cache = msal.SerializableTokenCache()
-    if session.get('token_cache'):
-        cache.deserialize(session['token_cache'])
     return cache
 
 def _save_cache(cache):
-    if cache.has_state_changed:
-        session['token_cache'] = cache.serialize()
+    # Dummy cache save function. Can be extended for server-side caching.
+    pass
 
 if __name__ == '__main__':
     app.run()
