@@ -1,3 +1,10 @@
+// Global variable to store people data
+let people = [
+  { name: "John Doe", jobTitle: "Software Engineer", age: 28, location: "New York, NY", bio: "Passionate about web development and AI." },
+  { name: "Jane Smith", jobTitle: "Product Manager", age: 32, location: "San Francisco, CA", bio: "Experienced in leading cross-functional teams." },
+  { name: "Bob Johnson", jobTitle: "UX Designer", age: 35, location: "London, UK", bio: "Creating intuitive and beautiful user experiences." },
+];
+
 // Function to create a single card
 function createCard(person) {
   return `
@@ -48,7 +55,7 @@ function createEditPopup(person = {}) {
   const isNewPerson = Object.keys(person).length === 0;
   const title = isNewPerson ? "Add New Person" : "Edit Person";
 
-  return `
+  const popupHtml = `
     <div id="edit-popup" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="bg-white p-8 rounded-lg w-full max-w-2xl h-3/4 relative z-10 flex flex-col">
         <div class="flex justify-between items-center mb-4">
@@ -84,17 +91,17 @@ function createEditPopup(person = {}) {
           </form>
         </div>
         <div id="json-view" class="hidden flex-grow overflow-auto">
-          <textarea id="json-edit" class="w-full h-full p-4 font-mono text-sm">${JSON.stringify(person, null, 2)}</textarea>
+          <textarea id="json-edit" class="w-full h-full p-4 font-mono text-sm border rounded transition-colors duration-200">${JSON.stringify(person, null, 2)}</textarea>
         </div>
         <div class="flex justify-between items-center mt-4">
           <div class="relative group">
-            <button id="swap-view" class="text-blue-500 hover:text-blue-700">
+            <button id="swap-view" class="text-blue-500 hover:text-blue-700 disabled:opacity-50">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
               </svg>
             </button>
             <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-              Switch View
+              Switch view
             </div>
           </div>
           <div class="flex items-center space-x-2">
@@ -111,7 +118,7 @@ function createEditPopup(person = {}) {
             </div>
             `}
             <div class="relative group">
-              <button id="commit-changes" class="text-green-500 hover:text-green-700">
+              <button id="commit-changes" class="text-green-500 hover:text-green-700 disabled:opacity-50">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
@@ -126,20 +133,97 @@ function createEditPopup(person = {}) {
       <div class="fixed inset-0 bg-black opacity-50"></div>
     </div>
   `;
+
+  document.body.insertAdjacentHTML('beforeend', popupHtml);
+
+  const editForm = document.getElementById('edit-form');
+  const jsonEdit = document.getElementById('json-edit');
+  const swapViewButton = document.getElementById('swap-view');
+  const commitChangesButton = document.getElementById('commit-changes');
+
+  function updateFormFromJson() {
+    try {
+      const jsonData = JSON.parse(jsonEdit.value);
+      for (const [key, value] of Object.entries(jsonData)) {
+        const input = editForm.elements[key];
+        if (input) {
+          input.value = value;
+        }
+      }
+      jsonEdit.classList.remove('border-red-500', 'bg-red-100');
+      swapViewButton.disabled = false;
+      commitChangesButton.disabled = false;
+      swapViewButton.querySelector('.icon').classList.remove('icon-disabled');
+      commitChangesButton.querySelector('.icon').classList.remove('icon-disabled');
+    } catch (error) {
+      jsonEdit.classList.add('border-red-500', 'bg-red-100');
+      swapViewButton.disabled = true;
+      commitChangesButton.disabled = true;
+      swapViewButton.querySelector('.icon').classList.add('icon-disabled');
+      commitChangesButton.querySelector('.icon').classList.add('icon-disabled');
+    }
+  }
+
+  function updateJsonFromForm() {
+    const formData = new FormData(editForm);
+    const jsonData = Object.fromEntries(formData.entries());
+    jsonData.age = parseInt(jsonData.age, 10);
+    jsonEdit.value = JSON.stringify(jsonData, null, 2);
+  }
+
+  editForm.addEventListener('input', updateJsonFromForm);
+  jsonEdit.addEventListener('input', updateFormFromJson);
+
+  swapViewButton.addEventListener('click', () => {
+    const prettyView = document.getElementById('pretty-view');
+    const jsonView = document.getElementById('json-view');
+    prettyView.classList.toggle('hidden');
+    jsonView.classList.toggle('hidden');
+    if (!jsonView.classList.contains('hidden')) {
+      updateJsonFromForm();
+    } else {
+      updateFormFromJson();
+    }
+  });
+
+  document.getElementById('close-popup').addEventListener('click', () => {
+    document.getElementById('edit-popup').remove();
+    toggleBlur(false);
+  });
+
+  if (!isNewPerson) {
+    document.getElementById('delete-entry').addEventListener('click', () => {
+      if (confirm('Are you sure you want to delete this entry?')) {
+        const index = people.findIndex(p => p.name === person.name);
+        if (index !== -1) {
+          people.splice(index, 1);
+          refreshGrid();
+          document.getElementById('edit-popup').remove();
+          toggleBlur(false);
+        }
+      }
+    });
+  }
+
+  commitChangesButton.addEventListener('click', () => {
+    const formData = new FormData(editForm);
+    const updatedPerson = Object.fromEntries(formData.entries());
+    updatedPerson.age = parseInt(updatedPerson.age, 10);
+    
+    if (isNewPerson) {
+      people.push(updatedPerson);
+    } else {
+      const index = people.findIndex(p => p.name === person.name);
+      if (index !== -1) {
+        people[index] = updatedPerson;
+      }
+    }
+    
+    refreshGrid();
+    document.getElementById('edit-popup').remove();
+    toggleBlur(false);
+  });
 }
-
-// Example usage
-let people = [
-  { name: "John Doe", jobTitle: "Software Engineer", age: 28, location: "New York, NY", bio: "Passionate about web development and AI." },
-  { name: "Jane Smith", jobTitle: "Product Manager", age: 32, location: "San Francisco, CA", bio: "Experienced in leading cross-functional teams." },
-  { name: "Bob Johnson", jobTitle: "UX Designer", age: 35, location: "London, UK", bio: "Creating intuitive and beautiful user experiences." },
-];
-
-// Generate the HTML
-let gridHtml = generateCardGrid(people);
-
-// Insert the generated HTML into the DOM
-document.getElementById('content-container').innerHTML = gridHtml;
 
 // Function to toggle blur
 function toggleBlur(shouldBlur) {
@@ -161,37 +245,9 @@ function toggleBlur(shouldBlur) {
 
 // Function to refresh the grid
 function refreshGrid() {
-  gridHtml = generateCardGrid(people);
+  const gridHtml = generateCardGrid(people);
   document.getElementById('content-container').innerHTML = gridHtml;
   addEventListeners();
-}
-
-// Function to handle form submission
-function handleFormSubmit(index) {
-  const form = document.getElementById('edit-form');
-  const formData = new FormData(form);
-  const updatedPerson = Object.fromEntries(formData.entries());
-  updatedPerson.age = parseInt(updatedPerson.age, 10);
-  
-  if (index === undefined) {
-    people.push(updatedPerson);
-  } else {
-    people[index] = updatedPerson;
-  }
-  
-  refreshGrid();
-  document.getElementById('edit-popup').remove();
-  toggleBlur(false);
-}
-
-// Function to handle entry deletion
-function handleDelete(index) {
-  if (confirm('Are you sure you want to delete this entry?')) {
-    people.splice(index, 1);
-    refreshGrid();
-    document.getElementById('edit-popup').remove();
-    toggleBlur(false);
-  }
 }
 
 // Function to add all event listeners
@@ -200,55 +256,19 @@ function addEventListeners() {
   infoIcons.forEach((icon, index) => {
     icon.addEventListener('click', () => {
       const person = people[index];
-      const popupHtml = createEditPopup(person);
-      document.body.insertAdjacentHTML('beforeend', popupHtml);
-      
+      createEditPopup(person);
       toggleBlur(true);
-      
-      document.getElementById('close-popup').addEventListener('click', () => {
-        document.getElementById('edit-popup').remove();
-        toggleBlur(false);
-      });
-
-      document.getElementById('swap-view').addEventListener('click', () => {
-        const prettyView = document.getElementById('pretty-view');
-        const jsonView = document.getElementById('json-view');
-        prettyView.classList.toggle('hidden');
-        jsonView.classList.toggle('hidden');
-      });
-
-      document.getElementById('commit-changes').addEventListener('click', () => handleFormSubmit(index));
-
-      const deleteButton = document.getElementById('delete-entry');
-      if (deleteButton) {
-        deleteButton.addEventListener('click', () => handleDelete(index));
-      }
     });
   });
-
 
   const addNewCard = document.getElementById('add-new-card');
   addNewCard.addEventListener('click', () => {
-    const popupHtml = createEditPopup();
-    document.body.insertAdjacentHTML('beforeend', popupHtml);
-    
+    createEditPopup();
     toggleBlur(true);
-    
-    document.getElementById('close-popup').addEventListener('click', () => {
-      document.getElementById('edit-popup').remove();
-      toggleBlur(false);
-    });
-
-    document.getElementById('swap-view').addEventListener('click', () => {
-      const prettyView = document.getElementById('pretty-view');
-      const jsonView = document.getElementById('json-view');
-      prettyView.classList.toggle('hidden');
-      jsonView.classList.toggle('hidden');
-    });
-
-    document.getElementById('commit-changes').addEventListener('click', () => handleFormSubmit());
   });
 }
 
-// Initial addition of event listeners
-document.addEventListener('DOMContentLoaded', addEventListeners);
+// Initial setup
+document.addEventListener('DOMContentLoaded', () => {
+  refreshGrid();
+});
