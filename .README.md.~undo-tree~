@@ -1,0 +1,9 @@
+(undo-tree-save-format-version . 1)
+"161b7c59e107270e923ee9e1276807dac862b0ca"
+[nil nil nil nil (26386 20285 935946 660000) 0 nil]
+([nil nil ((1 . 22) (t . -1)) nil (26386 20285 935944 869000) 0 nil])
+([nil nil ((22 . 24)) nil (26386 20285 935943 242000) 0 nil])
+([nil nil ((#("o" 0 1 (font-lock-multiline t face markdown-header-face-1 markdown-heading-1-atx (1 24 nil nil nil nil nil nil 1 3 3 24 #<buffer README.md>) markdown-heading (1 24 nil nil nil nil nil nil 1 3 3 24 #<buffer README.md>) fontified t)) . -23) (undo-tree-id0 . -1) 24) nil (26386 20285 935940 874000) 0 nil])
+([nil nil ((23 . 31)) nil (26386 20285 935924 941000) 0 nil])
+([nil current ((31 . 32)) nil (26386 20285 935918 698000) 0 nil])
+nil
