@@ -106,7 +106,20 @@ def fetch_conditional_access():
     # Decode base64 encoded templates
     decoded_templates = {}
     for key, value in response_data.items():
-        decoded_templates[key] = base64.urlsafe_b64decode(value).decode('utf-8')
+        print("Value: ", value)
+
+        if isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
+            # Extract the string from the list if it's a list with one element
+            value = value[0]
+        
+        if isinstance(value, str):  # Ensure that the value is a string before decoding
+            try:
+                decoded_templates[key] = base64.urlsafe_b64decode(value).decode('utf-8')
+            except Exception as e:
+                return f"Error decoding template for key '{key}': {str(e)}"
+        else:
+            print(f"Skipping key '{key}' because its value is not a valid string or list (type: {type(value)})")
+
 
     # Save decoded templates in a variable
     templates_variable = decoded_templates
@@ -117,18 +130,76 @@ def fetch_conditional_access():
     return "Templates fetched and decoded successfully."
 
 
-@app.route('/api/send_template')
-def send_template():
-    access_token = request.cookies.get('access_token')
-    if not access_token:
-        return redirect(url_for('login'))
 
-    expiration_timestamp = request.cookies.get('access_token_exp')
-    if expiration_timestamp:
-        print(f"Access token expires at (UNIX timestamp): {expiration_timestamp}")
+@app.route('/api/apply', methods=['POST'])
+def apply_template():
+    # Extract the JSON data from the request
+    data = request.json
 
-    print("Access token:", access_token)
-    return "Access token used in send_template function."
+    if 'template' not in data:
+        return "Template not provided in the request body.", 400
+
+    # Encode the 'template' field in base64 URL-safe format
+    encoded_template = base64.urlsafe_b64encode(data['template'].encode('utf-8')).decode('utf-8')
+
+    # URL from environment variable
+    apply_url = os.getenv('APPLY_API_URL')
+
+    if not apply_url:
+        return "Apply API URL is not configured."
+
+    # Construct the payload with the encoded template
+    payload = {
+        'template': encoded_template
+    }
+
+    try:
+        # Send POST request with the payload
+        response = requests.post(apply_url, json=payload)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return f"Error applying template: {str(e)}"
+
+    # Return the success message or data from the apply response
+    return response.json()
+
+
+# New route for /format (POST request)
+@app.route('/api/format', methods=['POST'])
+def format_template():
+    # Extract the JSON data from the request
+    data = request.json
+
+    if 'template' not in data or 'format' not in data:
+        return "Both 'template' and 'format' must be provided in the request body.", 400
+
+    # Encode the 'template' field in base64 URL-safe format
+    encoded_template = base64.urlsafe_b64encode(data['template'].encode('utf-8')).decode('utf-8')
+
+    # URL from environment variable
+    format_url = os.getenv('FORMAT_API_URL')
+
+    if not format_url:
+        return "Format API URL is not configured."
+
+    # Construct the payload with the encoded template and format
+    payload = {
+        'template': encoded_template,
+        'format': data['format']
+    }
+
+    try:
+        # Send POST request with the payload (no cookies needed)
+        response = requests.post(format_url, json=payload)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return f"Error formatting template: {str(e)}"
+
+    # Return the formatted string based on the requested format (JSON/YAML, etc.)
+    return response.json()
+
+
+
 
 def _build_msal_app(cache=None, authority=None):
     return msal.ConfidentialClientApplication(
