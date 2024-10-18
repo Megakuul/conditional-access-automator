@@ -2,12 +2,16 @@ from flask import Flask, render_template, redirect, url_for, request, make_respo
 import msal
 import time  # Import time module
 
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 app = Flask(__name__)
 app.secret_key = 'your_secure_secret_key'  # Replace with your Flask app's secret key
 
-CLIENT_ID = '870ea751-cb49-4c3b-822e-ec31ee665ffa'
-CLIENT_SECRET = 'vTq8Q~arhOxdBKhjKWYxq3K0S5AcPBuZ0FM14aOx'  # Replace with your client secret
-AUTHORITY = 'https://login.microsoftonline.com/eab1298d-e619-4d4c-9804-b028a0d97e52'
+CLIENT_ID = os.getenv('CLIENT_ID')
+CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+AUTHORITY = os.getenv('AUTHORITY')
 REDIRECT_URI = 'http://localhost:5000/api/auth/callback'
 SCOPE = ['Policy.ReadWrite.ConditionalAccess', 'Policy.Read.All']
 
