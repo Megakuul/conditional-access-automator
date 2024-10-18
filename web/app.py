@@ -91,6 +91,8 @@ def fetch_conditional_access():
         'access_token_exp': expiration_timestamp
     }
 
+    print(cookies)
+
     try:
         # Make the request with cookies
         response = requests.get(templates_url, cookies=cookies)
