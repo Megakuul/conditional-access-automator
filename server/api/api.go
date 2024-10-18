@@ -1,17 +1,26 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/megakuul/conditional-access-automator/server/adapter"
+)
 
 type Api struct {
 	server *http.Server
 }
 
-type ApiHandler struct {}
+type ApiHandler struct {
+	adapter *adapter.AzureAdapter
+}
 
 func NewApi(addr string) *Api {
-	serveHandler := ApiHandler{}
+	serveHandler := ApiHandler{
+		adapter: &adapter.AzureAdapter{},
+	}
 	
 	serveMux := http.NewServeMux()
+	serveMux.HandleFunc("/list", serveHandler.list)
 	serveMux.HandleFunc("/format", serveHandler.format)
 	serveMux.HandleFunc("/apply", serveHandler.apply)
 	
