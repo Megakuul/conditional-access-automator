@@ -5,3 +5,7 @@
 
 # Ignore VSCode stuff
 .vscode/**
+
+.venv
+
+web/flask_session/
