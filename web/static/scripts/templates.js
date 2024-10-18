@@ -3,11 +3,7 @@ function createCard(person) {
     return `
       <div class="bg-white shadow-md rounded-lg p-6 relative">
         <div class="absolute top-2 right-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <circle cx="12" cy="12" r="10" stroke-width="2" />
-            <line x1="12" y1="16" x2="12" y2="12" stroke-width="2" />
-            <line x1="12" y1="8" x2="12" y2="8" stroke-width="2" />
-          </svg>
+        <img src="/static/assets/i.svg" class="h-6 w-6 text-blue-500">
         </div>
         <h2 class="text-xl font-semibold mb-2">${person.name}</h2>
         <p class="text-gray-600">${person.jobTitle}</p>
