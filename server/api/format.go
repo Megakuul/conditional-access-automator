@@ -41,7 +41,7 @@ func (h* ApiHandler) format(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonTmpl := []byte{}
+	jsonTmpl := make([]byte, base64.URLEncoding.EncodedLen(len(req.Template)))
 	_, err = base64.URLEncoding.Decode(jsonTmpl, []byte(req.Template))
 	if err!=nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -66,7 +66,7 @@ func (h* ApiHandler) format(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseFormatTmpl := []byte{}
+	baseFormatTmpl := make([]byte, base64.URLEncoding.EncodedLen(len(formatTmpl)))
 	base64.URLEncoding.Encode(baseFormatTmpl, formatTmpl)
 
 	res := formatResponse{

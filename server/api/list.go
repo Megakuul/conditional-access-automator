@@ -57,7 +57,7 @@ func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		baseJsonTmpl := []byte{}
+		baseJsonTmpl := make([]byte, base64.URLEncoding.EncodedLen(len(jsonTmpl)))
 		base64.URLEncoding.Encode(baseJsonTmpl, jsonTmpl)
 		res.Templates = append(res.Templates, string(baseJsonTmpl))
 	}
