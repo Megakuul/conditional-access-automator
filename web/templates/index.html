@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-
-{% block title %}Home - My Flask App{% endblock %}
-
 {% block content %}
-  <h1 class="text-4xl font-bold text-blue-500">Welcome to My Website!</h1>
-  <p class="mt-4 text-gray-600">This is the homepage content.</p>
+  {% if user %}
+    <h1>Welcome, {{ user['name'] }}!</h1>
+  {% else %}
+    <h1>Welcome to the Conditional Access Automator</h1>
+    <p>Please <a href="{{ url_for('login') }}">log in</a> to continue.</p>
+  {% endif %}
 {% endblock %}

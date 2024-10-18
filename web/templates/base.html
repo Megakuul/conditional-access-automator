@@ -4,7 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}My Flask App{% endblock %}</title>
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- MSAL.js Library -->
+  <!--<script src="https://alcdn.msauth.net/browser/2.34.0/js/msal-browser.min.js"></script>-->
+  <!-- Auth Script -->
+  <!--<script src="{{ url_for('static', filename='scripts/auth.js') }}"></script>-->
 </head>
 <body class="bg-gray-100">
   <!-- Navbar -->
@@ -16,7 +21,6 @@
           <div>
             <a href="/" class="flex items-center py-5 px-2 text-gray-700 hover:text-gray-900">
               <img src="{{ url_for('static', filename='assets/logo.svg') }}" alt="logo" class="h-9 w-9">
-
               <span class="font-bold">Conditional Access Automator</span>
             </a>
           </div>
@@ -29,10 +33,16 @@
           </div>
         </div>
         <!-- Secondary Navbar items -->
+
         <div class="hidden md:flex items-center space-x-1">
-          <a href="#" class="py-2 px-3 bg-blue-500 text-white rounded hover:bg-blue-400">Login</a>
-          <a href="#" class="py-2 px-3 bg-gray-700 text-white rounded hover:bg-gray-600">Sign Up</a>
+          {% if 'user' in session %}
+            <span class="text-gray-700 ml-4">Hello, {{ session['user']['name'] }}</span>
+            <a href="{{ url_for('logout') }}" class="py-2 px-3 bg-gray-700 text-white rounded hover:bg-gray-600">Logout</a>
+          {% else %}
+            <a href="{{ url_for('login') }}" class="py-2 px-3 bg-blue-500 text-white rounded hover:bg-blue-400">Login</a>
+          {% endif %}
         </div>
+
       </div>
     </div>
   </nav>
