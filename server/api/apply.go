@@ -1,11 +1,13 @@
 package api
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+
 	"github.com/megakuul/conditional-access-automator/server/engine"
 )
 
@@ -52,7 +54,7 @@ func (h* ApiHandler) apply(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("cannot base64 decode the template body"))
 		return
 	}
-
+	jsonTmpl = bytes.ReplaceAll(jsonTmpl, []byte("\x00"), []byte(""))
 	tmpl, err := engine.ParseTemplate(jsonTmpl)
 	if err!=nil {
 		w.WriteHeader(http.StatusBadRequest)

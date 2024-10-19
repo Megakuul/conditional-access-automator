@@ -59,7 +59,21 @@ func (a *AzureAdapter) FetchPolicies(accessToken string) ([]map[string]interface
 	if err!=nil {
 		return nil, err
 	}
-	return bodyMap["value"].([]map[string]interface{}), nil
+	bodyValues, ok := bodyMap["value"].([]interface{})
+	if !ok {
+    return nil, fmt.Errorf(string(body))
+	}
+
+	var bodyMaps []map[string]interface{}
+	for _, value := range bodyValues {
+    if item, ok := value.(map[string]interface{}); ok {
+			bodyMaps = append(bodyMaps, item)
+    } else {
+			return nil, fmt.Errorf("unexpected type in value slice")
+    }
+	}
+
+	return bodyMaps, nil
 }
 
 

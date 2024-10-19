@@ -4,15 +4,31 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
 
-func safeString(s *string) string {
-    if s == nil {
-        return ""
-    }
-    return *s
+func safeString(s interface{}) string {
+	str, ok := s.(string)
+	if ok {
+		return str
+	}
+	return ""
+}
+
+func safeInt(i interface{}, def int) int {
+	switch v := i.(type) {
+	case int:
+		return v
+	case string:
+		if intValue, err := strconv.Atoi(v); err == nil {
+			return intValue
+		}
+	default:
+		return def
+	}
+	return def
 }
 
 func excludeEmergencyAccount(body *Template, account string) {
@@ -70,20 +86,21 @@ func SerializeTemplate(body *Template, format, emergencyAccount string) ([]byte,
 
 // ParseAzureTemplate parses the Azure policy from byte slice map
 func ParseAzureTemplate(bodyMap map[string]interface{}) (*Template, error) {
+
 	
-	action, actionCondition := generateActionCondition(bodyMap["grantControls"].(map[string]interface{}))
+	action, actionCondition := generateActionCondition(bodyMap["grantControls"])
 
 	return &Template{
-		Id:          safeString(bodyMap["id"].(*string)),
-		Name:        safeString(bodyMap["displayName"].(*string)),
-		Description: safeString(bodyMap["description"].(*string)),
-		State:       STATE_TYPE(bodyMap["state"].(int)),
+		Id:          safeString(bodyMap["id"]),
+		Name:        safeString(bodyMap["displayName"]),
+		Description: safeString(bodyMap["description"]),
+		State:       STATE_TYPE(safeInt(bodyMap["state"], 0)),
 		Policy: Policy{
 			Action:          action,
 			ActionCondition: actionCondition,
-			Entities:        generateEntities(bodyMap["conditions"].(map[string]interface{})),
-			Resources:       generateResources(bodyMap["conditions"].(map[string]interface{})),
-			Conditions:      generateConditions(bodyMap["conditions"].(map[string]interface{})),
+			Entities:        generateEntities(bodyMap["conditions"]),
+			Resources:       generateResources(bodyMap["conditions"]),
+			Conditions:      generateConditions(bodyMap["conditions"]),
 		},
 	}, nil
 }

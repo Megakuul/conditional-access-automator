@@ -1,16 +1,28 @@
 package engine
 
+import (
+	"strconv"
+)
+
 // Generates the action condition based on a given grant controls map
-func generateActionCondition(grant map[string]interface{}) (bool, ActionCondition) {
+func generateActionCondition(grant interface{}) (bool, ActionCondition) {
 	action := false
 	actionCondition := ActionCondition{}
-	if grant != nil {
-		if operator, ok := grant["operator"].(string); ok {
+	if g, ok := grant.(map[string]interface{}); ok {
+		if operator, ok := g["operator"].(string); ok {
 			action = true
 			actionCondition.ChainOperator = operator
-			if controls, ok := grant["builtInControls"].([]interface{}); ok {
-				for _, condition := range controls {			
-					actionCondition.Conditions = append(actionCondition.Conditions, ACTION_CONDITION(condition.(int)))
+			if controls, ok := g["builtInControls"].([]interface{}); ok {
+				for _, condition := range controls {
+					if condStr, ok := condition.(string); ok {
+            if condInt, err := strconv.Atoi(condStr); err == nil {
+							actionCondition.Conditions = append(actionCondition.Conditions, ACTION_CONDITION(condInt))
+            } else {
+							return false, ActionCondition{}
+            }
+					} else {
+            return false, ActionCondition{}
+					}
 				}
 			}
 		}
@@ -18,85 +30,162 @@ func generateActionCondition(grant map[string]interface{}) (bool, ActionConditio
 	return action, actionCondition
 }
 
-// Generates entities from the condition set map
-func generateEntities(cond map[string]interface{}) []Entity {
+
+func generateEntities(cond interface{}) []Entity {
 	entities := []Entity{}
-	if users, ok := cond["users"].(map[string]interface{}); ok {
-		// Handle excluded users
-		if excludeUsers, ok := users["excludeUsers"].([]interface{}); ok {
-			for _, entity := range excludeUsers {
-				entities = append(entities, Entity{
-					Include: false,
-					Type:    USER,
-					Name:    entity.(string),
-				})
+	if c, ok := cond.(map[string]interface{}); ok {
+		if users, ok := c["users"].(map[string]interface{}); ok {
+			// Handle excluded users
+			if excludeUsers, ok := users["excludeUsers"].([]interface{}); ok {
+				for _, entity := range excludeUsers {
+					entities = append(entities, Entity{
+						Include: false,
+						Type:    USER,
+						Name:    entity.(string),
+					})
+				}
+			}
+			// Handle included users
+			if includeUsers, ok := users["includeUsers"].([]interface{}); ok {
+				for _, entity := range includeUsers {
+					entities = append(entities, Entity{
+						Include: true,
+						Type:    USER,
+						Name:    entity.(string),
+					})
+				}
+			}
+			// Handle excluded groups
+			if excludeGroups, ok := users["excludeGroups"].([]interface{}); ok {
+				for _, entity := range excludeGroups {
+					entities = append(entities, Entity{
+						Include: false,
+						Type:    GROUP,
+						Name:    entity.(string),
+					})
+				}
+			}
+			// Handle included groups
+			if includeGroups, ok := users["includeGroups"].([]interface{}); ok {
+				for _, entity := range includeGroups {
+					entities = append(entities, Entity{
+						Include: true,
+						Type:    GROUP,
+						Name:    entity.(string),
+					})
+				}
+			}
+			// Handle excluded roles
+			if excludeRoles, ok := users["excludeRoles"].([]interface{}); ok {
+				for _, entity := range excludeRoles {
+					entities = append(entities, Entity{
+						Include: false,
+						Type:    ROLE,
+						Name:    entity.(string),
+					})
+				}
+			}
+			// Handle included roles
+			if includeRoles, ok := users["includeRoles"].([]interface{}); ok {
+				for _, entity := range includeRoles {
+					entities = append(entities, Entity{
+						Include: true,
+						Type:    ROLE,
+						Name:    entity.(string),
+					})
+				}
 			}
 		}
-		// Handle included users
-		if includeUsers, ok := users["includeUsers"].([]interface{}); ok {
-			for _, entity := range includeUsers {
-				entities = append(entities, Entity{
-					Include: true,
-					Type:    USER,
-					Name:    entity.(string),
-				})
-			}
-		}
-		// Repeat the same for groups and roles
 	}
 	return entities
 }
 
 // Generates resources from the condition set map
-func generateResources(cond map[string]interface{}) []Resource {
+func generateResources(cond interface{}) []Resource {
 	resources := []Resource{}
-	if applications, ok := cond["applications"].(map[string]interface{}); ok {
-		if excludeApps, ok := applications["excludeApplications"].([]interface{}); ok {
-			for _, resource := range excludeApps {
-				resources = append(resources, Resource{
-					Include: false,
-					Type:    APP,
-					Name:    resource.(string),
-				})
+	if c, ok := cond.(map[string]interface{}); ok {
+		if applications, ok := c["applications"].(map[string]interface{}); ok {
+			if excludeApps, ok := applications["excludeApplications"].([]interface{}); ok {
+				for _, resource := range excludeApps {
+					resources = append(resources, Resource{
+						Include: false,
+						Type:    APP,
+						Name:    resource.(string),
+					})
+				}
 			}
-		}
-		if includeApps, ok := applications["includeApplications"].([]interface{}); ok {
-			for _, resource := range includeApps {
-				resources = append(resources, Resource{
-					Include: true,
-					Type:    APP,
-					Name:    resource.(string),
-				})
+			if includeApps, ok := applications["includeApplications"].([]interface{}); ok {
+				for _, resource := range includeApps {
+					resources = append(resources, Resource{
+						Include: true,
+						Type:    APP,
+						Name:    resource.(string),
+					})
+				}
 			}
 		}
 	}
 	return resources
 }
 
-// Generates conditions from the condition set map
-func generateConditions(cond map[string]interface{}) []Condition {
+func generateConditions(cond interface{}) []Condition {
 	conditions := []Condition{}
-	if platforms, ok := cond["platforms"].(map[string]interface{}); ok {
-		if excludePlatforms, ok := platforms["excludePlatforms"].([]interface{}); ok {
-			for _, platform := range excludePlatforms {
-				conditions = append(conditions, Condition{
-					Include: false,
-					Type:    PLATFORM,
-					Name:    platform.(string),
-				})
+
+	if c, ok := cond.(map[string]interface{}); ok {
+		if platforms, ok := c["platforms"].(map[string]interface{}); ok {
+			if excludePlatforms, ok := platforms["excludePlatforms"].([]interface{}); ok {
+				for _, platform := range excludePlatforms {
+					conditions = append(conditions, Condition{
+						Include: false,
+						Type:    PLATFORM,
+						Name:    platform.(string),
+					})
+				}
+			}
+			if includePlatforms, ok := platforms["includePlatforms"].([]interface{}); ok {
+				for _, platform := range includePlatforms {
+					conditions = append(conditions, Condition{
+						Include: true,
+						Type:    PLATFORM,
+						Name:    platform.(string),
+					})
+				}
 			}
 		}
-		if includePlatforms, ok := platforms["includePlatforms"].([]interface{}); ok {
-			for _, platform := range includePlatforms {
+
+		// Handling locations
+		if locations, ok := c["locations"].(map[string]interface{}); ok {
+			if excludeLocations, ok := locations["excludeLocations"].([]interface{}); ok {
+				for _, location := range excludeLocations {
+					conditions = append(conditions, Condition{
+						Include: false,
+						Type:    LOCATION,
+						Name:    location.(string),
+					})
+				}
+			}
+			if includeLocations, ok := locations["includeLocations"].([]interface{}); ok {
+				for _, location := range includeLocations {
+					conditions = append(conditions, Condition{
+						Include: true,
+						Type:    LOCATION,
+						Name:    location.(string),
+					})
+				}
+			}
+		}
+
+		// Handling client app types
+		if clientApps, ok := c["clientAppTypes"].([]interface{}); ok {
+			for _, clientApp := range clientApps {
 				conditions = append(conditions, Condition{
 					Include: true,
-					Type:    PLATFORM,
-					Name:    platform.(string),
+					Type:    CLIENT_APP,
+					Name:    clientApp.(string),
 				})
 			}
 		}
 	}
-	// Repeat for locations and client apps
 	return conditions
 }
 
