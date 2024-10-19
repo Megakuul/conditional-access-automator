@@ -194,6 +194,9 @@ func updateActionCondition(grant map[string]interface{}, action bool, actionCond
 	if action {
 		grant["operator"] = actionCondition.ChainOperator
 		grant["builtInControls"] = actionCondition.Conditions
+	} else {
+		grant["operator"] = "OR"
+		grant["builtInControls"] = []string{"block"}
 	}
 }
 

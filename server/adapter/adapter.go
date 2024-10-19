@@ -52,6 +52,10 @@ func (a *AzureAdapter) FetchPolicies(accessToken string) ([]map[string]interface
 		return nil, err
 	}
 
+	if resp.StatusCode > 399 {
+		return nil, fmt.Errorf(string(body))
+	}
+
 	fmt.Printf("INFO: user %s fetched policies\n", userSub)
 
 	bodyMap := map[string]interface{}{}
@@ -91,7 +95,26 @@ func (a *AzureAdapter) UpdatePolicy(accessToken string, tmplId string, tmpl []by
 	if err!=nil {
 		return nil, err
 	}
+	
+	body, err := createPolicy(accessToken, tmpl)
+	if err!=nil {
+		body, err = updatePolicy(accessToken, tmplId, tmpl)
+		if err!=nil {
+			return nil, err
+		}
+	}
 
+	fmt.Printf("INFO: user %s updated policy %s\n", userSub, tmplId)
+
+	bodyMap := map[string]interface{}{}
+	err = json.Unmarshal(body, &bodyMap)
+	if err!=nil {
+		return nil, err
+	}
+	return bodyMap, nil
+}
+
+func createPolicy(accessToken string, tmpl []byte) ([]byte, error) {
 	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(tmpl))
 	if err != nil {
@@ -113,16 +136,41 @@ func (a *AzureAdapter) UpdatePolicy(accessToken string, tmplId string, tmpl []by
 		return nil, err
 	}
 
-	fmt.Printf("INFO: user %s updated policy %s\n", userSub, tmplId)
+	if resp.StatusCode > 399 {
+		return nil, fmt.Errorf(string(body))
+	}
 
-	bodyMap := map[string]interface{}{}
-	err = json.Unmarshal(body, &bodyMap)
+	return body, nil
+}
+
+func updatePolicy(accessToken string, tmplId string, tmpl []byte) ([]byte, error) {
+	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/" + tmplId
+	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(tmpl))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
 	if err!=nil {
 		return nil, err
 	}
-	return bodyMap, nil
-}
 
+	if resp.StatusCode > 399 {
+		return nil, fmt.Errorf(string(body))
+	}
+
+	return body, nil
+}
 
 func (a *AzureAdapter) DeletePolicy(accessToken string, tmplId string) error {	
 	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
@@ -154,9 +202,13 @@ func (a *AzureAdapter) DeletePolicy(accessToken string, tmplId string) error {
 	}
 	defer resp.Body.Close()
 
-	_, err = io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err!=nil {
 		return err
+	}
+
+	if resp.StatusCode > 399 {
+		return fmt.Errorf(string(body))
 	}
 
 	fmt.Printf("INFO: user %s deleted policy %s\n", userSub, tmplId)

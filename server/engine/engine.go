@@ -94,7 +94,7 @@ func ParseAzureTemplate(bodyMap map[string]interface{}) (*Template, error) {
 		Id:          safeString(bodyMap["id"]),
 		Name:        safeString(bodyMap["displayName"]),
 		Description: safeString(bodyMap["description"]),
-		State:       STATE_TYPE(safeInt(bodyMap["state"], 0)),
+		State:       safeString(bodyMap["state"]),
 		Policy: Policy{
 			Action:          action,
 			ActionCondition: actionCondition,
@@ -110,6 +110,7 @@ func SerializeAzureTemplate(body *Template, emergencyAccount string) (string, []
 	excludeEmergencyAccount(body, emergencyAccount)
 
 	azureTmpl := make(map[string]interface{})
+	azureTmpl["id"] = body.Id
 	azureTmpl["displayName"] = body.Name
 	azureTmpl["description"] = body.Description
 	azureTmpl["state"] = body.State
@@ -128,5 +129,6 @@ func SerializeAzureTemplate(body *Template, emergencyAccount string) (string, []
 	if err!=nil {
 		return "", nil, err
 	}
+	fmt.Println(string(outTmpl))
 	return body.Id, outTmpl, nil
 }

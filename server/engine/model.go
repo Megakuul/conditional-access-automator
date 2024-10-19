@@ -4,17 +4,9 @@ type Template struct {
 	Id          string     `yaml:"id" json:"id" xml:"id"`
 	Name        string     `yaml:"name" json:"name" xml:"name"`
 	Description string     `yaml:"description" json:"description" xml:"description"`
-	State       STATE_TYPE `yaml:"state" json:"state" xml:"state"`
+	State       string `yaml:"state" json:"state" xml:"state"`
 	Policy      Policy     `yaml:"policy" json:"policy" xml:"policy"`
 }
-
-type STATE_TYPE int
-
-const (
-	ON STATE_TYPE = iota
-	OFF
-	REPORT
-)
 
 type Grant struct {
 	AllowedCombinations string `yaml:"allowed_combinations" json:"allowed_combinations" xml:"allowed_combinations"`
