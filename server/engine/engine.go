@@ -44,7 +44,7 @@ func SerializeTemplate(body *Template, format string) ([]byte, error) {
 	return tmplFormat, nil
 }
 
-func ParseAzuretemplate(body models.ConditionalAccessPolicyable) (*Template, error) {
+func ParseAzureTemplate(body models.ConditionalAccessPolicyable) (*Template, error) {
 	fmt.Println(body)
 	return &Template{
 		Id: *body.GetId(),
