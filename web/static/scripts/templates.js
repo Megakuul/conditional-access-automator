@@ -30,6 +30,40 @@ let templates = [];
 // Define the example templates with updated 'state' values
 const exampleTemplates = [
   {
+    "id": "12345678-90ab-cdef-1234-567890abcdef",
+    "name": "CA001-MFA-Outside-NamedLocations-NormalUsers",
+    "state": 2,
+    "description": "MFA for normal users outside of specified Named Locations",
+    "policy": {
+      "action": true,
+      "action_condition": {
+        "chain_operator": "AND",
+        "conditions": [1]
+      },
+      "entities": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "normal-users-group-id"
+        }
+      ],
+      "resources": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "All"
+        }
+      ],
+      "conditions": [
+        {
+          "include": false,
+          "type": 2,
+          "name": "named-locations-id"
+        }
+      ]
+    }
+  },
+  {
     "id": "abcdef12-3456-7890-abcd-ef1234567890",
     "name": "CA002-GeoBlock-GlobalAdmins-Switzerland",
     "state": "enabledForReportingButNotEnforced",
