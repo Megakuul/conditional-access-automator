@@ -1,3 +1,4 @@
+/*
 let templates = null;
 
 // Fetch the data from the endpoint
@@ -48,8 +49,74 @@ fetch('/api/fetch_conditional_access', {
   console.error('There was a problem with the fetch operation:', error);
 });
 
+*/
+
+let templates = [
+  {
+    "id": "",
+    "name": "",
+    "state": 0,
+    "description": "",
+    "policy": {
+      "action": false,
+      "action_condition": null,
+      "entities": [],
+      "resources": [],
+      "conditions": []
+    }
+  }
+]
+
+// Enum mappings for ACTION_CONDITION and CONDITION_TYPE
+const ACTION_CONDITION_ENUM = {
+  0: 'MFA',
+  1: 'COMPLIANT_CLIENT',
+  2: 'DOMAINJOINED_CLIENT',
+  3: 'APPROVED_APP',
+  4: 'COMPLIANT_APP',
+  5: 'PASSWORDCHANGE',
+};
+
+const CONDITION_TYPE_ENUM = {
+  0: 'PLATFORM',
+  1: 'LOCATION',
+  2: 'CLIENT_APP',
+};
+
+// Reverse mappings for easier lookups
+const ACTION_CONDITION_VALUES = Object.entries(ACTION_CONDITION_ENUM).map(([key, value]) => ({
+  value: parseInt(key),
+  label: value,
+}));
+
+const CONDITION_TYPE_VALUES = Object.entries(CONDITION_TYPE_ENUM).map(([key, value]) => ({
+  value: parseInt(key),
+  label: value,
+}));
+
+// Define the functions to be called
+function processTemplate(templateJson) {
+  console.log('Processing template:', templateJson);
 
 
+  fetch('/api/apply', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(templateJson)
+})
+.then(response => response.json())
+.then(templateJson => console.log(templateJson))
+.catch(error => console.error('Error:', error));
+
+}
+
+function deleteTemplateById(id) {
+  // Implement your logic here
+  console.log('Deleting template with ID:', id);
+  // For example, you might send a delete request to a server
+}
 
 // Function to create a single card
 function createCard(template) {
@@ -64,7 +131,7 @@ function createCard(template) {
       <p class="card-info">ID: ${template.id}</p>
       <p class="card-info">State: ${stateText}</p>
       <p class="card-info">Description: ${template.description}</p>
-      <p class="card-info">Policy Action${actionText}</p>
+      <p class="card-info">Policy Action: ${actionText}</p>
     </div>
   `;
 }
@@ -87,10 +154,9 @@ function createAddNewCard() {
 function generateCardGrid(templates) {
   const cardsHtml = templates.map(template => createCard(template)).join('');
   const addNewCardHtml = createAddNewCard();
-  
+
   return `
     <div id="main-content" class="container">
-      <h1 class="text-4xl font-bold text-blue-500 mb-6">Template Grid</h1>
       <div class="card-grid">
         ${cardsHtml}
         ${addNewCardHtml}
@@ -103,11 +169,14 @@ function generateCardGrid(templates) {
 function createEditPopup(template = {}) {
   const isNewTemplate = Object.keys(template).length === 0;
   const title = isNewTemplate ? "Add New Template" : "Edit Template";
-  const policyAction = template.policy && template.policy.action ? template.policy.action : true;
+  const policyAction = template.policy && template.policy.action ? template.policy.action : false;
 
   const entities = template.policy?.entities || [];
   const resources = template.policy?.resources || [];
   const conditions = template.policy?.conditions || [];
+  const actionCondition = template.policy?.action_condition || {};
+  const selectedConditions = actionCondition.conditions || [];
+  const chainOperator = actionCondition.chain_operator || 'AND';
 
   const entitiesHtml = entities.map((entity, index) => createEntityFormGroup(entity, index)).join('');
   const resourcesHtml = resources.map((resource, index) => createResourceFormGroup(resource, index)).join('');
@@ -119,12 +188,12 @@ function createEditPopup(template = {}) {
         <div class="popup-header">
           <h2 class="popup-title">${title}</h2>
           <button id="close-popup" class="close-button">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div id="pretty-view" class="popup-form">
+        <div id="pretty-view" class="popup-form overflow-container overflow-container">
           <form id="edit-form" class="form-grid">
             <!-- Existing form fields -->
             <div class="form-group">
@@ -147,19 +216,31 @@ function createEditPopup(template = {}) {
               <label for="description" class="form-label">Description</label>
               <input id="description" name="description" class="form-input" value="${template.description || ''}">
             </div>
-            <div class="form-group">
-              <label for="allowed_combinations" class="form-label">Allowed Combinations</label>
-              <input id="allowed_combinations" name="allowed_combinations" class="form-input" value="${template.grant?.allowed_combinations || ''}">
-            </div>
             <!-- Policy Action Slider -->
             <div class="form-group">
-              <label class="form-label">Policy Action</label>
+              <label class="form-label">Allow Policy Action</label>
               <div class="slider-container dummy-container">
                 <label class="form-label hidden">${policyAction ? 'Allow' : 'Deny'}</label>
                 <label class="switch">
                   <input type="checkbox" id="action" name="action" ${policyAction ? 'checked' : ''}>
                   <span class="slider"></span>
                 </label>
+              </div>
+            </div>
+            <!-- Action Conditions and Chain Operator (Visible only when Allow Policy Action is enabled) -->
+            <div id="action-conditions-section" class="${policyAction ? '' : 'hidden'}">
+              <div class="form-group">
+                <label for="chain_operator" class="form-label">Chain Operator</label>
+                <select id="chain_operator" name="chain_operator" class="form-input">
+                  <option value="AND" ${chainOperator === 'AND' ? 'selected' : ''}>AND</option>
+                  <option value="OR" ${chainOperator === 'OR' ? 'selected' : ''}>OR</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label class="form-section">Action Conditions</label>
+                <div id="action-conditions-container">
+                  ${createActionConditionsCheckboxes(selectedConditions)}
+                </div>
               </div>
             </div>
             <!-- Entities Section -->
@@ -188,13 +269,14 @@ function createEditPopup(template = {}) {
             </div>
           </form>
         </div>
-        <div id="json-view" class="hidden popup-form">
-          <textarea id="json-edit" class="form-input h-full">${JSON.stringify(template, null, 2)}</textarea>
+        <div id="json-view" class="hidden popup-form overflow-container">
+          <textarea id="json-edit" class="form-input h-full overflow-container">${JSON.stringify(template, null, 2)}</textarea>
         </div>
         <div class="popup-footer">
           <div class="relative group">
             <button id="swap-view" class="icon-button">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="ml-3 h-9 w-9 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <!-- Icon for swapping views -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
               </svg>
             </button>
@@ -203,15 +285,21 @@ function createEditPopup(template = {}) {
             ${isNewTemplate ? '' : `
             <div class="relative group">
               <button id="delete-entry" class="icon-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <!-- Trash icon -->
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0
+                  0116.138 21H7.862a2 2 0
+                  01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1
+                  0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
             </div>
             `}
             <div class="relative group">
               <button id="commit-changes" class="icon-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <!-- Check icon -->
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
               </button>
@@ -225,22 +313,31 @@ function createEditPopup(template = {}) {
 
   document.body.insertAdjacentHTML('beforeend', popupHtml);
 
+  // Function to create checkboxes for action conditions
+  function createActionConditionsCheckboxes(selectedConditions) {
+    return ACTION_CONDITION_VALUES.map(condition => {
+      const isChecked = selectedConditions.includes(condition.value) ? 'checked' : '';
+      return `
+        <label class="checkbox-container">
+          <input type="checkbox" name="action_conditions" value="${condition.value}" ${isChecked}>
+          <span class="checkmark"></span>
+          ${condition.label}
+        </label>
+      `;
+    }).join('');
+  }
+
   // Function to create the "Add Entry" buttons
   function createAddEntryButton(type) {
     return `
       <div id="add-${type}-button" class="add-entry-card">
         <div class="add-entry-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" class="add-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 add-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
         </div>
       </div>
     `;
-  }
-
-  // Function to capitalize first letter
-  function capitalizeFirstLetter(string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
   }
 
   // Functions to create dynamic form groups for entities, resources, and conditions
@@ -257,6 +354,7 @@ function createEditPopup(template = {}) {
             </label>
             <button type="button" class="remove-entity-button remove-button">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mt-4 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
                   0116.138 21H7.862a2 2 0
@@ -269,13 +367,13 @@ function createEditPopup(template = {}) {
             <div class="form-group">
               <label class="form-label">Entity Type:</label>
               <select name="entities[${index}][entity_type]" class="form-input">
-                <option value="0" ${entity.entity_type === 0 ? 'selected' : ''}>USER</option>
-                <option value="1" ${entity.entity_type === 1 ? 'selected' : ''}>GROUP</option>
-                <option value="2" ${entity.entity_type === 2 ? 'selected' : ''}>ROLE</option>
+                <option value="0" ${entity.type === 0 ? 'selected' : ''}>USER</option>
+                <option value="1" ${entity.type === 1 ? 'selected' : ''}>GROUP</option>
+                <option value="2" ${entity.type === 2 ? 'selected' : ''}>ROLE</option>
               </select>
             </div>
             <div class="form-group">
-              <input type="text" name="entities[${index}][name]" value="${entity.name || ''}" class="form-input">
+              <input placeholder="Name" placeholder="Name" type="text" name="entities[${index}][name]" value="${entity.name || ''}" class="form-input">
             </div>
           </div>
         </div>
@@ -295,7 +393,8 @@ function createEditPopup(template = {}) {
               <span class="slider"></span>
             </label>
             <button type="button" class="remove-resource-button remove-button">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mt-4 trash-icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mt-4 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
                   0116.138 21H7.862a2 2 0
@@ -308,12 +407,12 @@ function createEditPopup(template = {}) {
             <div class="form-group">
               <label class="form-label">Resource Type:</label>
               <select name="resources[${index}][resource_type]" class="form-input">
-                <option value="0" ${resource.resource_type === 0 ? 'selected' : ''}>APP</option>
+                <option value="0" ${resource.type === 0 ? 'selected' : ''}>APP</option>
                 <!-- Add more resource types if needed -->
               </select>
             </div>
             <div class="form-group">
-              <input type="text" name="resources[${index}][name]" value="${resource.name || ''}" class="form-input">
+              <input placeholder="Name" type="text" name="resources[${index}][name]" value="${resource.name || ''}" class="form-input">
             </div>
           </div>
         </div>
@@ -333,7 +432,8 @@ function createEditPopup(template = {}) {
               <span class="slider"></span>
             </label>
             <button type="button" class="remove-condition-button remove-button">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mt-4 trash-icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mt-4 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
                   0116.138 21H7.862a2 2 0
@@ -346,13 +446,13 @@ function createEditPopup(template = {}) {
             <div class="form-group">
               <label class="form-label">Condition Type:</label>
               <select name="conditions[${index}][condition_type]" class="form-input">
-                <option value="0" ${condition.condition_type === 0 ? 'selected' : ''}>PLATFORM</option>
-                <option value="1" ${condition.condition_type === 1 ? 'selected' : ''}>LOCATION</option>
-                <option value="2" ${condition.condition_type === 2 ? 'selected' : ''}>CLIENT_APP</option>
+                ${CONDITION_TYPE_VALUES.map(ct => `
+                  <option value="${ct.value}" ${condition.type === ct.value ? 'selected' : ''}>${ct.label}</option>
+                `).join('')}
               </select>
             </div>
             <div class="form-group">
-              <input type="text" name="conditions[${index}][name]" value="${condition.name || ''}" class="form-input">
+              <input placeholder="Name" type="text" name="conditions[${index}][name]" value="${condition.name || ''}" class="form-input">
             </div>
           </div>
         </div>
@@ -373,12 +473,27 @@ function createEditPopup(template = {}) {
       editForm.elements['name'].value = jsonData.name || '';
       editForm.elements['state'].value = jsonData.state || '0';
       editForm.elements['description'].value = jsonData.description || '';
-      editForm.elements['allowed_combinations'].value = jsonData.grant?.allowed_combinations || '';
       editForm.elements['action'].checked = jsonData.policy?.action;
 
       // Update the Policy Action label
       const actionLabel = editForm.querySelector('.form-group .slider-container .form-label');
       actionLabel.textContent = jsonData.policy?.action ? 'Allow' : 'Deny';
+
+      // Show/hide action conditions section
+      const actionConditionsSection = document.getElementById('action-conditions-section');
+      if (jsonData.policy?.action) {
+        actionConditionsSection.classList.remove('hidden');
+      } else {
+        actionConditionsSection.classList.add('hidden');
+      }
+
+      // Update chain operator
+      editForm.elements['chain_operator'].value = jsonData.policy?.action_condition?.chain_operator || 'AND';
+
+      // Update action conditions checkboxes
+      const selectedConditions = jsonData.policy?.action_condition?.conditions || [];
+      const actionConditionsContainer = document.getElementById('action-conditions-container');
+      actionConditionsContainer.innerHTML = createActionConditionsCheckboxes(selectedConditions);
 
       // Clear and update entities
       const entitiesContainer = document.getElementById('entities-container');
@@ -426,11 +541,12 @@ function createEditPopup(template = {}) {
     jsonData.name = formData.get('name');
     jsonData.state = parseInt(formData.get('state'), 10);
     jsonData.description = formData.get('description');
-    jsonData.grant = {
-      allowed_combinations: formData.get('allowed_combinations')
-    };
     jsonData.policy = {
       action: formData.get('action') === 'on',
+      action_condition: {
+        chain_operator: formData.get('chain_operator') || 'AND',
+        conditions: []
+      },
       entities: [],
       resources: [],
       conditions: []
@@ -439,6 +555,24 @@ function createEditPopup(template = {}) {
     // Update the Policy Action label
     const actionLabel = editForm.querySelector('.form-group .slider-container .form-label');
     actionLabel.textContent = jsonData.policy.action ? 'Allow' : 'Deny';
+
+    // Show/hide action conditions section
+    const actionConditionsSection = document.getElementById('action-conditions-section');
+    if (jsonData.policy.action) {
+      actionConditionsSection.classList.remove('hidden');
+    } else {
+      actionConditionsSection.classList.add('hidden');
+    }
+
+    // Process action conditions if policy action is allowed
+    if (jsonData.policy.action) {
+      const checkedConditions = Array.from(editForm.querySelectorAll('input[name="action_conditions"]:checked'))
+        .map(input => parseInt(input.value, 10));
+      jsonData.policy.action_condition.conditions = checkedConditions;
+      jsonData.policy.action_condition.chain_operator = formData.get('chain_operator') || 'AND';
+    } else {
+      jsonData.policy.action_condition = null;
+    }
 
     // Process entities
     const entityGroups = editForm.querySelectorAll('.entity-group');
@@ -450,7 +584,7 @@ function createEditPopup(template = {}) {
 
       jsonData.policy.entities.push({
         include,
-        entity_type,
+        type: entity_type,
         name
       });
     });
@@ -465,7 +599,7 @@ function createEditPopup(template = {}) {
 
       jsonData.policy.resources.push({
         include,
-        resource_type,
+        type: resource_type,
         name
       });
     });
@@ -480,7 +614,7 @@ function createEditPopup(template = {}) {
 
       jsonData.policy.conditions.push({
         include,
-        condition_type,
+        type: condition_type,
         name
       });
     });
@@ -491,11 +625,18 @@ function createEditPopup(template = {}) {
   editForm.addEventListener('input', updateJsonFromForm);
   jsonEdit.addEventListener('input', updateFormFromJson);
 
-  // Update Policy Action label on change
+  // Update Policy Action label and show/hide action conditions on change
   const actionCheckbox = editForm.elements['action'];
   actionCheckbox.addEventListener('change', () => {
     const actionLabel = editForm.querySelector('.form-group .slider-container .form-label');
     actionLabel.textContent = actionCheckbox.checked ? 'Allow' : 'Deny';
+    const actionConditionsSection = document.getElementById('action-conditions-section');
+    if (actionCheckbox.checked) {
+      actionConditionsSection.classList.remove('hidden');
+    } else {
+      actionConditionsSection.classList.add('hidden');
+    }
+    updateJsonFromForm();
   });
 
   swapViewButton.addEventListener('click', () => {
@@ -518,6 +659,10 @@ function createEditPopup(template = {}) {
   if (!isNewTemplate) {
     document.getElementById('delete-entry').addEventListener('click', () => {
       if (confirm('Are you sure you want to delete this template?')) {
+        // Call the function with the ID as a parameter
+        deleteTemplateById(template.id);
+
+        // Existing code to remove the template and refresh the grid
         const index = templates.findIndex(t => t.id === template.id);
         if (index !== -1) {
           templates.splice(index, 1);
@@ -537,15 +682,26 @@ function createEditPopup(template = {}) {
     updatedTemplate.name = formData.get('name');
     updatedTemplate.state = parseInt(formData.get('state'), 10);
     updatedTemplate.description = formData.get('description');
-    updatedTemplate.grant = {
-      allowed_combinations: formData.get('allowed_combinations')
-    };
     updatedTemplate.policy = {
       action: formData.get('action') === 'on',
+      action_condition: {
+        chain_operator: formData.get('chain_operator') || 'AND',
+        conditions: []
+      },
       entities: [],
       resources: [],
       conditions: []
     };
+
+    // Process action conditions if policy action is allowed
+    if (updatedTemplate.policy.action) {
+      const checkedConditions = Array.from(editForm.querySelectorAll('input[name="action_conditions"]:checked'))
+        .map(input => parseInt(input.value, 10));
+      updatedTemplate.policy.action_condition.conditions = checkedConditions;
+      updatedTemplate.policy.action_condition.chain_operator = formData.get('chain_operator') || 'AND';
+    } else {
+      updatedTemplate.policy.action_condition = null;
+    }
 
     // Process entities
     const entityGroups = editForm.querySelectorAll('.entity-group');
@@ -557,7 +713,7 @@ function createEditPopup(template = {}) {
 
       updatedTemplate.policy.entities.push({
         include,
-        entity_type,
+        type: entity_type,
         name
       });
     });
@@ -572,7 +728,7 @@ function createEditPopup(template = {}) {
 
       updatedTemplate.policy.resources.push({
         include,
-        resource_type,
+        type: resource_type,
         name
       });
     });
@@ -587,11 +743,15 @@ function createEditPopup(template = {}) {
 
       updatedTemplate.policy.conditions.push({
         include,
-        condition_type,
+        type: condition_type,
         name
       });
     });
 
+    // Call the function with the JSON as a parameter
+    processTemplate(updatedTemplate);
+
+    // Existing code to update templates array and refresh the grid
     if (isNewTemplate) {
       templates.push(updatedTemplate);
     } else {
@@ -600,7 +760,6 @@ function createEditPopup(template = {}) {
         templates[index] = updatedTemplate;
       }
     }
-
     refreshGrid();
     document.getElementById('edit-popup').remove();
     toggleBlur(false);
@@ -721,3 +880,6 @@ function addEventListeners() {
     toggleBlur(true);
   });
 }
+
+// Initial call to refresh the grid
+refreshGrid();

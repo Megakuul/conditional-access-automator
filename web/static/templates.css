@@ -51,7 +51,6 @@ body {
     justify-content: center;
     cursor: pointer;
     transition: border-color 0.3s;
-    margin-top: 1rem;
   }
   
   .add-new-card:hover, .add-entry-card:hover {
@@ -131,9 +130,10 @@ body {
   }
   
   .popup-title {
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 700;
-  }
+    margin-left: 1.8rem;
+}
   
   .close-button {
     color: #718096;
@@ -462,4 +462,31 @@ body {
 
   #content-container {
     margin-top: 4rem;
+  }
+
+  #action-conditions-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .overflow-container::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .overflow-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  .overflow-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  
+  .overflow-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  #json-edit {
+    border: none;
+    background: #eee
   }
