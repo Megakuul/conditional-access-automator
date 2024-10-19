@@ -1,73 +1,5 @@
-/*
-let templates = null;
 
-// Fetch the data from the endpoint
-fetch('/api/fetch_conditional_access', {
-  method: 'GET',
-  credentials: 'include' // Include cookies in the request
-})
-.then(response => {
-  if (!response.ok) {
-    throw new Error('Network response was not ok ' + response.statusText);
-  }
-  return response.json();
-})
-.then(data => {
-  // The 'templates' field appears to be a stringified JSON, so we need to parse it
-  if (typeof data.templates === 'string') {
-    try {
-      templates = JSON.parse(data.templates); // Parse the stringified JSON
-    } catch (e) {
-      console.error('Failed to parse templates:', e);
-      return;
-    }
-  } else {
-    templates = data.templates;
-  }
-
-  // Wrap templates into an array if it's not already an array
-  if (!Array.isArray(templates)) {
-    templates = [templates];
-  }
-
-  // Now you can safely use array methods
-  templates.forEach(template => {
-    if (template.encodedData) {
-      let base64Url = template.encodedData;
-      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      let decodedData = atob(base64);
-      template.decodedData = decodedData;
-    }
-  });
-
-  console.log('Templates with decoded data:', templates);
-  
-  // Now that 'templates' has data, call 'refreshGrid' to update the UI
-  refreshGrid();
-})
-.catch(error => {
-  console.error('There was a problem with the fetch operation:', error);
-});
-
-*/
-
-let templates = [
-  {
-    "id": "",
-    "name": "",
-    "state": 0,
-    "description": "",
-    "policy": {
-      "action": false,
-      "action_condition": null,
-      "entities": [],
-      "resources": [],
-      "conditions": []
-    }
-  }
-]
-
-// Enum mappings for ACTION_CONDITION and CONDITION_TYPE
+// Rest of your code remains the same...
 const ACTION_CONDITION_ENUM = {
   0: 'MFA',
   1: 'COMPLIANT_CLIENT',
@@ -93,6 +25,98 @@ const CONDITION_TYPE_VALUES = Object.entries(CONDITION_TYPE_ENUM).map(([key, val
   value: parseInt(key),
   label: value,
 }));
+
+
+
+
+
+
+let templates = null;
+
+// Fetch the data from the endpoint
+fetch('/api/fetch_conditional_access', {
+  method: 'GET',
+  credentials: 'include' // Include cookies in the request
+})
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok ' + response.statusText);
+    }
+    console.log('Response with encoded data:', response);
+    return response.json();
+  })
+  .then(data => {
+    // Parse 'templates' if it's a stringified JSON
+    if (typeof data.templates === 'string') {
+      try {
+        templates = JSON.parse(data.templates);
+      } catch (e) {
+        console.error('Failed to parse templates:', e);
+        return;
+      }
+    } else {
+      templates = data.templates;
+    }
+
+    // Ensure 'templates' is an array
+    if (!Array.isArray(templates)) {
+      templates = [templates];
+    }
+
+    // Since 'templates' is an array of encoded strings, decode each one
+    templates = templates.map((encodedString, index) => {
+      let base64Url = encodedString;
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+
+      // Ensure the base64 string is properly padded
+      while (base64.length % 4 !== 0) {
+        base64 += '=';
+      }
+
+      try {
+        // Decode base64 to binary string
+        let binaryString = atob(base64);
+
+        // Convert binary string to bytes
+        let len = binaryString.length;
+        let bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Decode UTF-8 bytes to string
+        let decodedDataStr = new TextDecoder('utf-8').decode(bytes);
+
+        // Parse decoded data as JSON
+        let decodedData = JSON.parse(decodedDataStr);
+        return decodedData;
+      } catch (e) {
+        console.error('Failed to decode base64 or parse JSON at index', index, e);
+        return null;
+      }
+    });
+
+    console.log('Templates with decoded data:', templates);
+
+    // Now that 'templates' has data, call 'refreshGrid' to update the UI
+    refreshGrid();
+  })
+  .catch(error => {
+    console.error('There was a problem with the fetch operation:', error);
+  });
+
+// Rest of your code remains the same...
+
+
+
+
+
+
+
+
+
+
+
 
 // Define the functions to be called
 function processTemplate(templateJson) {
@@ -273,13 +297,29 @@ function createEditPopup(template = {}) {
           <textarea id="json-edit" class="form-input h-full overflow-container">${JSON.stringify(template, null, 2)}</textarea>
         </div>
         <div class="popup-footer">
-          <div class="relative group">
-            <button id="swap-view" class="icon-button">
-              <svg xmlns="http://www.w3.org/2000/svg" class="ml-3 h-9 w-9 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <!-- Icon for swapping views -->
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-            </button>
+          <div class="flex items-center space-x-2">
+            <div class="relative group">
+              <button id="swap-view" class="icon-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="ml-3 h-9 w-9 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <!-- Icon for swapping views -->
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </button>
+            </div>
+            <div class="relative group">
+              <button id="download-template" class="icon-button">
+                <!-- Use a download icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="ml-3 h-9 w-9 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <!-- Download icon -->
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 13l5 5 5-5m0-8v12" />
+                </svg>
+              </button>
+              <div id="download-menu" class="download-menu hidden">
+                <button data-format="json">JSON</button>
+                <button data-format="yaml">YAML</button>
+                <button data-format="xml">XML</button>
+              </div>
+            </div>
           </div>
           <div class="flex items-center space-x-2">
             ${isNewTemplate ? '' : `
@@ -764,6 +804,118 @@ function createEditPopup(template = {}) {
     document.getElementById('edit-popup').remove();
     toggleBlur(false);
   });
+
+  // Download button functionality
+  const downloadTemplateButton = document.getElementById('download-template');
+  const downloadMenu = document.getElementById('download-menu');
+
+  downloadTemplateButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    downloadMenu.classList.toggle('hidden');
+  });
+
+  // Close the download menu when clicking outside
+  document.addEventListener('click', (event) => {
+    if (!downloadTemplateButton.contains(event.target) && !downloadMenu.contains(event.target)) {
+      downloadMenu.classList.add('hidden');
+    }
+  });
+
+  // Add event listeners to the menu buttons
+  downloadMenu.querySelectorAll('button').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const format = button.getAttribute('data-format');
+      downloadTemplate(format);
+      downloadMenu.classList.add('hidden');
+    });
+  });
+
+  function downloadTemplate(format) {
+    let jsonData;
+    try {
+      jsonData = JSON.parse(jsonEdit.value);
+    } catch (e) {
+      alert('Invalid JSON data. Cannot download.');
+      return;
+    }
+
+    let content = '';
+    let filename = jsonData.id || 'template';
+    let mimeType = '';
+
+    switch (format) {
+      case 'json':
+        content = JSON.stringify(jsonData, null, 2);
+        filename += '.json';
+        mimeType = 'application/json';
+        break;
+      case 'yaml':
+        // Convert jsonData to YAML
+        content = jsonToYaml(jsonData);
+        filename += '.yaml';
+        mimeType = 'application/x-yaml';
+        break;
+      case 'xml':
+        // Convert jsonData to XML
+        content = jsonToXml(jsonData);
+        filename += '.xml';
+        mimeType = 'application/xml';
+        break;
+      default:
+        alert('Unsupported format');
+        return;
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Simple JSON to YAML converter
+  function jsonToYaml(obj) {
+    function convert(obj, indent) {
+      let yaml = '';
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          const value = obj[key];
+          if (typeof value === 'object' && value !== null) {
+            yaml += `${' '.repeat(indent)}${key}:\n${convert(value, indent + 2)}`;
+          } else {
+            yaml += `${' '.repeat(indent)}${key}: ${value}\n`;
+          }
+        }
+      }
+      return yaml;
+    }
+    return convert(obj, 0);
+  }
+
+  // Simple JSON to XML converter
+  function jsonToXml(obj) {
+    function convert(obj) {
+      let xml = '';
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          const value = obj[key];
+          if (typeof value === 'object' && value !== null) {
+            xml += `<${key}>${convert(value)}</${key}>`;
+          } else {
+            xml += `<${key}>${value}</${key}>`;
+          }
+        }
+      }
+      return xml;
+    }
+    return `<root>${convert(obj)}</root>`;
+  }
 
   // Attach event listeners for adding/removing dynamic sections
   function attachDynamicSectionEventListeners() {

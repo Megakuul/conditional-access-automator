@@ -6,8 +6,9 @@ import base64
 import requests
 from datetime import timedelta
 from flask_cors import CORS
-
+import requests
 import os
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -109,20 +110,47 @@ def authorized():
     expires_in = result.get('expires_in')  # Lifetime in seconds
     expiration_timestamp = int(time.time()) + int(expires_in) if expires_in else None
 
-    # Store user information in the session
-    session['user'] = {
-        'name': result.get('id_token_claims').get('name'),
-        'access_token': access_token,
-        'expires_at': expiration_timestamp  # Store expiration timestamp in session
+    # Set the request headers
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
     }
 
-    # Create a response that redirects to 'templates' and set cookies on it
-    response = make_response(redirect(url_for('templates')))
-    response.set_cookie('access_token', access_token, httponly=False)
-    if expiration_timestamp:
-        response.set_cookie('access_token_exp', str(expiration_timestamp), httponly=False)
+    # Microsoft Graph API endpoint for creating Conditional Access policies
+    url = 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies'
 
-    _save_cache(cache)
+    # Define the payload for the new Conditional Access policy
+    payload = {
+        "displayName": "Block Access from Untrusted Locations",
+        "state": "enabled",
+        "conditions": {
+            "users": {
+                "includeUsers": ["All"]
+            },
+            "locations": {
+                "includeLocations": ["All"],
+                "excludeLocations": ["Trusted_Location_ID"]
+            }
+        },
+        "grantControls": {
+            "operator": "OR",
+            "builtInControls": ["block"]
+        }
+    }
+
+    # Convert the payload to a JSON string
+    payload_json = json.dumps(payload)
+
+    # Send a POST request to create the Conditional Access policy
+    response = requests.post(url, headers=headers, data=payload_json)
+
+    # Check the response status
+    if response.status_code == 201:
+        print("Conditional Access Policy created successfully.")
+    else:
+        print(f"Failed to create policy: {response.status_code}")
+        print(response.json())
+
 
     return response  # Return the response with cookies set
 
