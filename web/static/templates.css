@@ -398,3 +398,64 @@ body {
 .dummy-container {
     display: block;
 }
+
+  /* Card Styles */
+  .sk.card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 15px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Skeleton Loading Effect */
+  .skeleton {
+    background-color: #dedede;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 0;
+    left: -150px;
+    height: 100%;
+    width: 150px;
+    background: linear-gradient(to right, transparent 0%, #f0f0f0 50%, transparent 100%);
+    animation: loading 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes loading {
+    0% {
+      left: -150px;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+
+  /* Placeholder Elements */
+  .card-title-placeholder {
+    width: 60%;
+    height: 20px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+  }
+
+  .card-info-placeholder {
+    width: 80%;
+    height: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+  }
+  .sk .info-icon {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 20px;
+    height: 20px;
+    background-color: #ccc;
+    border-radius: 50%;
+  }
