@@ -1,10 +1,11 @@
-from flask import Flask, jsonify, render_template, redirect, session, url_for, request, make_response, flash
+from flask import Flask, json, jsonify, render_template, redirect, session, url_for, request, make_response, flash
 
 import msal
 import time  # Import time module
 import base64
 import requests
 from datetime import timedelta
+from flask_cors import CORS
 
 import os
 from dotenv import load_dotenv
@@ -12,7 +13,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'your_secure_secret_key'  # Replace with your Flask app's secret key
-
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:5000"}})
 
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)  # Set session timeout to 60 minutes
 
@@ -117,13 +118,14 @@ def authorized():
 
     # Create a response that redirects to 'templates' and set cookies on it
     response = make_response(redirect(url_for('templates')))
-    response.set_cookie('access_token', access_token, httponly=True)
+    response.set_cookie('access_token', access_token, httponly=False)
     if expiration_timestamp:
-        response.set_cookie('access_token_exp', str(expiration_timestamp), httponly=True)
+        response.set_cookie('access_token_exp', str(expiration_timestamp), httponly=False)
 
     _save_cache(cache)
 
     return response  # Return the response with cookies set
+
 
 
 @app.route('/api/fetch_conditional_access')
@@ -132,12 +134,14 @@ def fetch_conditional_access():
     expiration_timestamp = request.cookies.get('access_token_exp')
 
     if not access_token or not expiration_timestamp:
+        flash('Authorization expired or missing', 'error')
         return jsonify({'error': 'Authorization expired or missing'}), 401
 
     templates_url = os.getenv('TEMPLATES_API_URL')
 
     if not templates_url:
-        return jsonify({'error': 'Templates API URL is not configured'}), 500
+        flash('Templates API URL is not configured.', 'error')
+        return jsonify({'error': 'Templates API URL is not configured.'}), 500
 
     cookies = {
         'access_token': access_token,
@@ -149,86 +153,113 @@ def fetch_conditional_access():
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         if e.response is not None:
-            # Access the entire response
             response = e.response
             status_code = response.status_code
             headers = response.headers
-            body = response.text  # Or response.content for raw bytes
-            
-            # Print or log the response details
-            print("Exception occurred:", e)
-            print("Status Code:", status_code)
-            print("Headers:", headers)
-            print("Body:", body)
-            
-            # Optionally, include the response body in your JSON response
+            body = response.text
+            print(f"Exception occurred: {e}")
+            flash(f"Error fetching templates: {e}", 'error')
             return jsonify({
                 'error': f"Error fetching templates: {str(e)}",
                 'status_code': status_code,
                 'headers': dict(headers),
                 'body': body
-            }), 500
+            }), status_code
         else:
-            # No response was received (e.g., network error)
-            print("No response received:", e)
-            return jsonify({'error': f"Error fetching templates: {str(e)} + Body: {str(body)}"}), 500
+            print(f"No response received: {e}")
+            flash(f"Error fetching templates: {str(e)}", 'error')
+            return jsonify({'error': f"Error fetching templates: {str(e)}"}), 500
 
     response_data = response.json()
-
-    #decoded_templates = {}
-    #for key, value in response_data.items():
-     #   if isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
-      #      value = value[0]
-        
-      #  if isinstance(value, str):
-      #      try:
-      #          decoded_templates[key] = base64.urlsafe_b64decode(value).decode('utf-8')
-      #      except Exception as e:
-      #          return jsonify({'error': f"Error decoding template for key '{key}': {str(e)}"}), 500
-
     print("output: ", response_data)
     return jsonify(response_data)
 
 
-@app.route('/api/apply/<template_data>', methods=['GET'])
-def apply_template(template_data):
-    try:
-        decoded_template = base64.urlsafe_b64decode(template_data).decode('utf-8')
-    except Exception as e:
-        flash(f"Error decoding template data: {str(e)}", 'error')
-        return redirect(url_for('home'))
+@app.route('/api/apply', methods=['POST'])
+def apply_template():
+    access_token = request.cookies.get('access_token')
+    expiration_timestamp = request.cookies.get('access_token_exp')
+
+    if not access_token or not expiration_timestamp:
+        flash('Authorization expired or missing', 'error')
+        return jsonify({'error': 'Authorization expired or missing'}), 401
 
     apply_url = os.getenv('APPLY_API_URL')
 
     if not apply_url:
-        flash('Apply API URL is not configured.', 'error')
-        return redirect(url_for('home'))
+        flash('Templates API URL is not configured.', 'error')
+        return jsonify({'error': 'Templates API URL is not configured.'}), 500
 
-    payload = {'template': decoded_template}
+    cookies = {
+        'access_token': access_token,
+        'access_token_exp': expiration_timestamp
+    }
+
+    # Get the JSON data from the request
+    json_data = request.get_json()
+    print(f"Received JSON data: {json_data}")
+
+    # Encode the JSON data as base64 URL encoded string
+    json_str = json.dumps(json_data)
+    print(f"Normal JSON data: {json_str}")
+    base64_encoded_data = base64.urlsafe_b64encode(json_str.encode()).decode()
+    print("base64_encoded_data: ", base64_encoded_data)
+    # Prepare the body with the encoded JSON under the "template" key
+    payload = {
+        "template": base64_encoded_data
+    }
+    print("payload: ",payload)
 
     try:
-        response = requests.post(apply_url, json=payload)
+        # Send the POST request with the body payload
+        response = requests.post(apply_url, json=payload, cookies=cookies)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        flash(f"Error applying template: {str(e)}", 'error')
-        return redirect(url_for('home'))
+        if e.response is not None:
+            response = e.response
+            status_code = response.status_code
+            headers = response.headers
+            body = response.text
+            print(f"Exception occurred: {e}")
+            print("body: ", body)
+            flash(f"Error fetching templates: {e}, body: {body}", 'error')
+            return jsonify({
+                'error': f"Error fetching templates: {str(e)}",
+                'status_code': status_code,
+                'headers': dict(headers),
+                'body': body  # Include the body in the response
+            }), status_code
+        else:
+            print(f"No response received: {e}")
+            flash(f"Error fetching templates: {str(e)}", 'error')
+            return jsonify({'error': f"Error fetching templates: {str(e)}"}), 500
 
-    return response.json()
+    response_data = response.json()
+    print("output: ", response_data)
+    return jsonify(response_data)
 
-
-@app.route('/api/format/<template_data>/<format_type>', methods=['GET'])
-def format_template(template_data, format_type):
+@app.route('/api/format', methods=['POST'])
+def format_template():
     try:
+        data = request.get_json()
+        template_data = data.get('template_data')
+        format_type = data.get('format_type')
+
+        if not template_data or not format_type:
+            flash('Missing template_data or format_type in the request.', 'error')
+            return jsonify({'error': 'Missing template_data or format_type in the request'}), 400
+
         decoded_template = base64.urlsafe_b64decode(template_data).decode('utf-8')
+
     except Exception as e:
         flash(f"Error decoding template data: {str(e)}", 'error')
-        return redirect(url_for('home'))
+        return jsonify({'error': f"Error decoding template data: {str(e)}"}), 400
 
     format_url = os.getenv('FORMAT_API_URL')
 
     if not format_url:
         flash('Format API URL is not configured.', 'error')
-        return redirect(url_for('home'))
+        return jsonify({'error': 'Format API URL is not configured.'}), 500
 
     payload = {
         'template': decoded_template,
@@ -240,9 +271,10 @@ def format_template(template_data, format_type):
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         flash(f"Error formatting template: {str(e)}", 'error')
-        return redirect(url_for('home'))
+        return jsonify({'error': f"Error formatting template: {str(e)}"}), 500
 
     return response.json()
+
 
 
 def _build_msal_app(cache=None, authority=None):
