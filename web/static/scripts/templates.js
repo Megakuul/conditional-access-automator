@@ -25,12 +25,14 @@ const CONDITION_TYPE_VALUES = Object.entries(CONDITION_TYPE_ENUM).map(([key, val
   label: value,
 }));
 
-// Define the example templates
+let templates = [];
+
+// Define the example templates with updated 'state' values
 const exampleTemplates = [
   {
     "id": "abcdef12-3456-7890-abcd-ef1234567890",
     "name": "CA002-GeoBlock-GlobalAdmins-Switzerland",
-    "state": 2,
+    "state": "enabledForReportingButNotEnforced",
     "description": "Block Global Administrators outside of Switzerland",
     "policy": {
       "action": false,
@@ -64,7 +66,7 @@ const exampleTemplates = [
   {
     "id": "56789012-3456-abcd-ef12-34567890abcd",
     "name": "CA003-GeoBlock-NormalUsers-SpecifiedCountries",
-    "state": 2,
+    "state": "enabledForReportingButNotEnforced",
     "description": "Block normal users outside of Liechtenstein, Austria, France, Switzerland, Germany",
     "policy": {
       "action": false,
@@ -98,7 +100,7 @@ const exampleTemplates = [
   {
     "id": "7890abcd-1234-5678-90ef-1234567890ab",
     "name": "CA004-Block-LegacyAuthentication",
-    "state": 2,
+    "state": "enabledForReportingButNotEnforced",
     "description": "Block legacy authentication for all users",
     "policy": {
       "action": false,
@@ -132,7 +134,7 @@ const exampleTemplates = [
   {
     "id": "90123456-7890-abcd-ef12-34567890abcd",
     "name": "CA005-MFA-Registration-Outside-NamedLocations",
-    "state": 2,
+    "state": "enabledForReportingButNotEnforced",
     "description": "MFA for registration of MFA methods outside of specified Named Locations",
     "policy": {
       "action": true,
@@ -165,8 +167,6 @@ const exampleTemplates = [
   }
 ];
 
-let templates = null;
-
 // Fetch the data from the endpoint
 fetch('/api/fetch_conditional_access', {
   method: 'GET',
@@ -197,7 +197,6 @@ fetch('/api/fetch_conditional_access', {
       templates = [templates];
     }
 
-    console.log('Templates before:', templates);
     // Since 'templates' is an array of encoded strings, decode each one
     templates = templates.map((encodedString, index) => {
       let base64Url = encodedString;
@@ -264,7 +263,12 @@ function deleteTemplateById(id) {
 
 // Function to create a single card
 function createCard(template) {
-  const stateText = template.state === 0 ? "ON" : template.state === 1 ? "OFF" : "REPORT";
+  const stateTextMap = {
+    "enabled": "ON",
+    "disabled": "OFF",
+    "enabledForReportingButNotEnforced": "REPORT"
+  };
+  const stateText = stateTextMap[template.state] || "UNKNOWN";
   const actionText = template.policy && template.policy.action ? "Allow" : "Deny";
   return `
     <div class="card">
@@ -381,10 +385,20 @@ function createEditPopup(template = {}) {
 
   const entities = template.policy?.entities || [];
   const resources = template.policy?.resources || [];
-  const conditions = template.policy?.conditions || [];
+  let conditions = template.policy?.conditions || [];
+
   const actionCondition = template.policy?.action_condition || {};
   const selectedConditions = actionCondition.conditions || [];
   const chainOperator = actionCondition.chain_operator || 'AND';
+
+  // If creating a new template, add the default condition
+  if (isNewTemplate) {
+    conditions.push({
+      include: true,
+      type: 2, // CLIENT_APP
+      name: 'all'
+    });
+  }
 
   const entitiesHtml = entities.map((entity, index) => createEntityFormGroup(entity, index)).join('');
   const resourcesHtml = resources.map((resource, index) => createResourceFormGroup(resource, index)).join('');
@@ -402,7 +416,7 @@ function createEditPopup(template = {}) {
             </svg>
           </button>
         </div>
-        <div id="pretty-view" class="popup-form overflow-container">
+        <div id="pretty-view" class="popup-form">
           <form id="edit-form" class="form-grid grid grid-cols-1 gap-4">
             <!-- Existing form fields -->
             <div class="form-group">
@@ -416,9 +430,9 @@ function createEditPopup(template = {}) {
             <div class="form-group">
               <label for="state" class="form-label block text-sm font-medium text-gray-700">State</label>
               <select id="state" name="state" class="form-input mt-1 block w-full" required>
-                <option value="0" ${template.state === 0 ? 'selected' : ''}>ON</option>
-                <option value="1" ${template.state === 1 ? 'selected' : ''}>OFF</option>
-                <option value="2" ${template.state === 2 ? 'selected' : ''}>REPORT</option>
+                <option value="enabled" ${template.state === "enabled" ? 'selected' : ''}>ON</option>
+                <option value="disabled" ${template.state === "disabled" ? 'selected' : ''}>OFF</option>
+                <option value="enabledForReportingButNotEnforced" ${template.state === "enabledForReportingButNotEnforced" ? 'selected' : ''}>REPORT</option>
               </select>
             </div>
             <div class="form-group">
@@ -427,10 +441,10 @@ function createEditPopup(template = {}) {
             </div>
             <!-- Policy Action Slider -->
             <div class="form-group">
-              <label class="form-section block text-gray-700">Allow Policy Action</label>
+              <label class="form-label block text-sm font-medium text-gray-700">Allow Policy Action</label>
               <div class="slider-container flex items-center">
-                <label class="form-label ml-2 mr-2">${policyAction ? 'Allow' : 'Deny'}</label>
-                <label class="switch relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                <label class="form-label mr-2">${policyAction ? 'Allow' : 'Deny'}</label>
+                <label class="switch relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
                   <input type="checkbox" id="action" name="action" ${policyAction ? 'checked' : ''} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
                   <span class="slider round"></span>
                 </label>
@@ -446,7 +460,7 @@ function createEditPopup(template = {}) {
                 </select>
               </div>
               <div class="form-group full-width">
-                <label class="form-section block text-gray-700">Action Conditions</label>
+                <label class="form-section block text-sm font-medium text-gray-700">Action Conditions</label>
                 <div id="action-conditions-container" class="mt-2">
                   ${createActionConditionsCheckboxes(selectedConditions)}
                 </div>
@@ -454,7 +468,7 @@ function createEditPopup(template = {}) {
             </div>
             <!-- Entities Section -->
             <div class="form-group full-width">
-              <label class="form-section block text-gray-700">Entities</label>
+              <label class="form-section block text-sm font-medium text-gray-700">Entities</label>
               <div id="entities-container">
                 ${entitiesHtml}
               </div>
@@ -470,7 +484,7 @@ function createEditPopup(template = {}) {
             </div>
             <!-- Conditions Section -->
             <div class="form-group full-width">
-              <label class="form-section block text-gray-700">Conditions</label>
+              <label class="form-section block text-sm font-medium text-gray-700">Conditions</label>
               <div id="conditions-container">
                 ${conditionsHtml}
               </div>
@@ -479,7 +493,7 @@ function createEditPopup(template = {}) {
           </form>
         </div>
         <div id="json-view" class="hidden popup-form">
-          <textarea id="json-edit" class="overflow-container form-input h-full w-full p-2 border rounded">${JSON.stringify(template, null, 2)}</textarea>
+          <textarea id="json-edit" class="form-input h-full w-full p-2 border rounded">${JSON.stringify(template, null, 2)}</textarea>
         </div>
         <div class="popup-footer flex justify-between mt-4">
           <div class="flex items-center space-x-2">
@@ -499,7 +513,7 @@ function createEditPopup(template = {}) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </button>
-              <div id="download-menu" class="download-menu hidden absolute bg-white border rounded left-full ml-2 top-0 shadow-lg">
+              <div id="download-menu" class="download-menu hidden absolute bg-white border rounded mt-2 right-0 shadow-lg">
                 <button data-format="json" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">JSON</button>
                 <button data-format="yaml" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">YAML</button>
                 <button data-format="xml" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">XML</button>
@@ -555,7 +569,7 @@ function createEditPopup(template = {}) {
   // Function to create the "Add Entry" buttons
   function createAddEntryButton(type) {
     return `
-      <div id="add-${type}-button" class="add-entry-card flex items-center justify-center mt-0 p-4 border border-dashed rounded cursor-pointer hover:bg-gray-100">
+      <div id="add-${type}-button" class="add-entry-card flex items-center justify-center mt-4 p-4 border border-dashed rounded cursor-pointer hover:bg-gray-100">
         <div class="add-entry-icon">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 add-icon text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -573,15 +587,15 @@ function createEditPopup(template = {}) {
       <div class="entity-group border p-4 rounded mt-4" data-index="${index}">
         <div class="entity-group-inner">
           <div class="slider-container flex items-center justify-between">
-            <div class="flex flex-col items-center">
-              <label class="form-label ml-2 mr-2">Include</label>
+            <div class="flex items-center">
+              <label class="form-label mr-2">Include:</label>
               <label class="switch relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
                 <input type="checkbox" name="entities[${index}][include]" ${includeChecked} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
                 <span class="slider round"></span>
               </label>
             </div>
             <button type="button" class="remove-entity-button remove-button text-red-600 hover:text-red-800">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon corner-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
@@ -616,15 +630,15 @@ function createEditPopup(template = {}) {
       <div class="resource-group border p-4 rounded mt-4" data-index="${index}">
         <div class="resource-group-inner">
           <div class="slider-container flex items-center justify-between">
-            <div class="flex flex-col items-center">
-              <label class="form-label ml-2 mr-2">Include</label>
+            <div class="flex items-center">
+              <label class="form-label mr-2">Include:</label>
               <label class="switch relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
                 <input type="checkbox" name="resources[${index}][include]" ${includeChecked} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
                 <span class="slider round"></span>
               </label>
             </div>
             <button type="button" class="remove-resource-button remove-button text-red-600 hover:text-red-800">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon corner-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
@@ -658,15 +672,15 @@ function createEditPopup(template = {}) {
       <div class="condition-group border p-4 rounded mt-4" data-index="${index}">
         <div class="condition-group-inner">
           <div class="slider-container flex items-center justify-between">
-            <div class="flex flex-col items-center">
-              <label class="form-label ml-2 mr-2">Include</label>
+            <div class="flex items-center">
+              <label class="form-label mr-2">Include:</label>
               <label class="switch relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
                 <input type="checkbox" name="conditions[${index}][include]" ${includeChecked} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
                 <span class="slider round"></span>
               </label>
             </div>
             <button type="button" class="remove-condition-button remove-button text-red-600 hover:text-red-800">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon corner-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
@@ -706,7 +720,7 @@ function createEditPopup(template = {}) {
       // Update main form fields
       editForm.elements['id'].value = jsonData.id || '';
       editForm.elements['name'].value = jsonData.name || '';
-      editForm.elements['state'].value = jsonData.state || '0';
+      editForm.elements['state'].value = jsonData.state || 'disabled';
       editForm.elements['description'].value = jsonData.description || '';
       editForm.elements['action'].checked = jsonData.policy?.action;
 
@@ -774,7 +788,7 @@ function createEditPopup(template = {}) {
 
     jsonData.id = formData.get('id');
     jsonData.name = formData.get('name');
-    jsonData.state = parseInt(formData.get('state'), 10);
+    jsonData.state = formData.get('state') || 'disabled';
     jsonData.description = formData.get('description');
     jsonData.policy = {
       action: formData.get('action') === 'on',
@@ -915,7 +929,7 @@ function createEditPopup(template = {}) {
 
     updatedTemplate.id = formData.get('id');
     updatedTemplate.name = formData.get('name');
-    updatedTemplate.state = parseInt(formData.get('state'), 10);
+    updatedTemplate.state = formData.get('state') || 'disabled';
     updatedTemplate.description = formData.get('description');
     updatedTemplate.policy = {
       action: formData.get('action') === 'on',
@@ -1232,4 +1246,4 @@ function addEventListeners() {
 }
 
 // Initial call to set up event listeners
-//refreshGrid();
+refreshGrid();
