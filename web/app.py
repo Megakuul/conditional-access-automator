@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, session, url_for, request, make_response, flash
+from flask import Flask, jsonify, render_template, redirect, session, url_for, request, make_response, flash
 
 import msal
 import time  # Import time module
@@ -43,9 +43,10 @@ def home():
 @app.route('/templates')
 def templates():
     if 'user' not in session or not session['user'].get('access_token'):
-        #flash('You must be logged in to access this page.', 'error')
         return redirect(url_for('login'))
-    return render_template('templates.html')
+    
+    templates_variable = fetch_conditional_access()  # Fetch the templates data
+    return render_template('templates.html', templates=templates_variable)
 
 
 @app.route('/login')
@@ -120,14 +121,12 @@ def fetch_conditional_access():
     expiration_timestamp = request.cookies.get('access_token_exp')
 
     if not access_token or not expiration_timestamp:
-        flash('Authorization expired or missing. Please login again.', 'error')
-        return redirect(url_for('login'))
+        return jsonify({'error': 'Authorization expired or missing'}), 401
 
     templates_url = os.getenv('TEMPLATES_API_URL')
 
     if not templates_url:
-        flash('Templates API URL is not configured.', 'error')
-        return redirect(url_for('home'))
+        return jsonify({'error': 'Templates API URL is not configured'}), 500
 
     cookies = {
         'access_token': access_token,
@@ -138,8 +137,7 @@ def fetch_conditional_access():
         response = requests.get(templates_url, cookies=cookies)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        flash(f"Error fetching templates: {str(e)}", 'error')
-        return redirect(url_for('home'))
+        return jsonify({'error': f"Error fetching templates: {str(e)}"}), 500
 
     response_data = response.json()
 
@@ -152,11 +150,9 @@ def fetch_conditional_access():
             try:
                 decoded_templates[key] = base64.urlsafe_b64decode(value).decode('utf-8')
             except Exception as e:
-                flash(f"Error decoding template for key '{key}': {str(e)}", 'error')
-                return redirect(url_for('home'))
+                return jsonify({'error': f"Error decoding template for key '{key}': {str(e)}"}), 500
 
-    templates_variable = decoded_templates
-    return "Templates fetched and decoded successfully."
+    return jsonify(decoded_templates)
 
 
 @app.route('/api/apply/<template_data>', methods=['GET'])
