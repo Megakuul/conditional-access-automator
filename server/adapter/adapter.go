@@ -89,53 +89,8 @@ func (a *AzureAdapter) UpdatePolicy(
 		context.Background(), nil,
 	)
 	if err!=nil {
-		// TODO
-		requestBody := models.NewConditionalAccessPolicy()
-		displayName := "Access to EXO requires MFA"
-		requestBody.SetDisplayName(&displayName) 
-		state := models.ENABLED_CONDITIONALACCESSPOLICYSTATE 
-		requestBody.SetState(&state) 
-		conditions := models.NewConditionalAccessConditionSet()
-
-		applications := models.NewConditionalAccessApplications()
-		includeApplications := []string{
-			"00000002-0000-0ff1-ce00-000000000000",
-		}
-		applications.SetIncludeApplications(includeApplications)
-		conditions.SetApplications(applications)
-
-		users := models.NewConditionalAccessUsers()
-		includeGroups := []string{
-			"ba8e7ded-8b0f-4836-ba06-8ff1ecc5c8ba",
-		}
-		users.SetIncludeGroups(includeGroups)
-		conditions.SetUsers(users)
-
-		locations := models.NewConditionalAccessLocations()
-		includeLocations := []string{
-			"All",
-		}
-		locations.SetIncludeLocations(includeLocations)
-
-		excludeLocations := []string{
-			"AllTrusted",
-		}
-		locations.SetExcludeLocations(excludeLocations)
-		conditions.SetLocations(locations)
-
-		requestBody.SetConditions(conditions)
-
-		grantControls := models.NewConditionalAccessGrantControls()
-		operator := "OR"
-		grantControls.SetOperator(&operator)
-
-
-		requestBody.SetGrantControls(grantControls)
-
-		// TODO
-		
 		policy, err = graphClient.Identity().ConditionalAccess().Policies().Post(
-			context.Background(), requestBody, nil,
+			context.Background(), tmpl, nil,
 		)
 		if err != nil {
 			return nil, err

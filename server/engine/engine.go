@@ -93,7 +93,7 @@ func SerializeAzureTemplate(body *Template, emergencyAccount string) (models.Con
 	excludeEmergencyAccount(body, emergencyAccount)
 	
 	azureTmpl := models.NewConditionalAccessPolicy()
-	azureTmpl.SetId(&body.Id)
+	// azureTmpl.SetId(&body.Id)
 	azureTmpl.SetDisplayName(&body.Name)
 	azureTmpl.SetDescription(&body.Description)
 	
