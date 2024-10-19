@@ -7,7 +7,7 @@ The Conditional Access Automator (CAA) is a powerful tool designed to streamline
 - Automatically apply policies to customer tenants
 - Compare existing policies with templates
 - Export policies for documentation
-- Create and update Named Locations
+- Quickly apply many policies to different tenants
 <img src="1.png" alt="Image 1" width="70%">
 <img src="2.png" alt="Image 2" width="70%">
 <img src="3.png" alt="Image 3" width="70%">
