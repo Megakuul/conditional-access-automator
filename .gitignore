@@ -8,4 +8,6 @@
 
 .venv
 
+.env
+
 web/flask_session/
