@@ -1,29 +1,27 @@
 let templates = null;
 
-
-
-  // Fetch the data from the endpoint
-  fetch('/api/fetch_conditional_access', {
-    method: 'GET',
-    credentials: 'include' // Include cookies in the request
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Network response was not ok ' + response.statusText);
-    }
-    return response.json();
-  })
-  .then(data => {
-    // Assign the data to a JavaScript variable
-    templates = data;
-    console.log('Templates:', templates);
-    
-    // You can now use the 'templates' variable in your JavaScript code
-    // For example, update the DOM or process the data as needed
-  })
-  .catch(error => {
-    console.error('There was a problem with the fetch operation:', error);
-  });
+// Fetch the data from the endpoint
+fetch('/api/fetch_conditional_access', {
+  method: 'GET',
+  credentials: 'include' // Include cookies in the request
+})
+.then(response => {
+  if (!response.ok) {
+    throw new Error('Network response was not ok ' + response.statusText);
+  }
+  return response.json();
+})
+.then(data => {
+  // Assign the data to the global 'templates' variable
+  templates = data;
+  console.log('Templates:', templates);
+  
+  // Now that 'templates' has data, call 'refreshGrid' to update the UI
+  refreshGrid();
+})
+.catch(error => {
+  console.error('There was a problem with the fetch operation:', error);
+});
 
 
 
