@@ -293,6 +293,39 @@ function deleteTemplateById(id) {
   // Implement your logic here
   console.log('Deleting template with ID:', id);
   // For example, you might send a delete request to a server
+
+
+      // Prepare the payload with the template ID
+      const payload = {
+        template_id: id
+    };
+
+    // Make a POST request to the API endpoint
+    fetch('/api/destroy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin', // This ensures cookies (such as access_token) are sent with the request
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(error => {
+                console.error('Error:', error);
+                throw new Error(error.message || 'Error occurred');
+            });
+        }
+        return response.json(); // Parse the JSON response
+    })
+    .then(data => {
+        console.log('Success:', data); // Handle the successful response
+    })
+    .catch(error => {
+        console.error('Request failed:', error); // Handle errors
+    });
+
+
 }
 
 // Function to create a single card

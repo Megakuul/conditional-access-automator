@@ -270,6 +270,71 @@ def apply_template():
 
 
 
+
+@app.route('/api/destroy', methods=['POST'])
+def destroy():
+    access_token = request.cookies.get('access_token')
+    expiration_timestamp = request.cookies.get('access_token_exp')
+
+    if not access_token or not expiration_timestamp:
+        return jsonify({'error': 'Authorization expired or missing'}), 401
+
+    destroy_url = os.getenv('DESTROY_API_URL')
+
+    if not destroy_url:
+        return jsonify({'error': 'Templates API URL is not configured'}), 500
+    
+    json_data = request.get_json()
+    print(f"Received JSON data: {json_data}")
+    
+    payload = {
+        'template_id': json_data.get('template_id'),
+    }
+
+    cookies = {
+        'access_token': access_token,
+        'access_token_exp': expiration_timestamp
+    }
+
+    try:
+        response = requests.post(destroy_url, cookies=cookies, json=payload)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        if e.response is not None:
+            # Access the entire response
+            response = e.response
+            status_code = response.status_code
+            headers = response.headers
+            body = response.text  # Or response.content for raw bytes
+            
+            # Print or log the response details
+            print("Exception occurred:", e)
+            print("Status Code:", status_code)
+            print("Headers:", headers)
+            print("Body:", body)
+            
+            # Optionally, include the response body in your JSON response
+            return jsonify({
+                'error': f"Error fetching templates: {str(e)}",
+                'status_code': status_code,
+                'headers': dict(headers),
+                'body': body
+            }), 500
+        else:
+            # No response was received (e.g., network error)
+            print("No response received:", e)
+            return jsonify({'error': f"Error fetching templates: {str(e)} + Body: {str(body)}"}), 500
+
+    response_data = response.json()
+
+
+    print("output: ", response_data)
+    return jsonify(response_data)
+
+
+
+
+
 @app.route('/api/format/<template_data>/<format_type>', methods=['GET'])
 def format_template(template_data, format_type):
     try:
