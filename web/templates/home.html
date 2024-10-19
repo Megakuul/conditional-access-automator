@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}CAA - Home{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <!--<h1 class="text-4xl font-bold text-blue-500 mb-6"> Conditional Access Automator</h1>-->
+  
+  <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-4">About CAA</h2>
+    <p class="text-gray-600 mb-4">
+      The Conditional Access Automator (CAA) is a powerful tool designed to streamline the configuration and management of Microsoft Entra Conditional Access policies. Our solution automates policy creation based on best practices, verifies existing policies, and provides clear visibility into policy changes.
+    </p>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6">
+    <div class="bg-white shadow-md rounded-lg p-6">
+      <h3 class="text-xl font-semibold text-gray-800 mb-3">Key Features</h3>
+      <ul class="list-disc list-inside text-gray-600">
+        <li>Define and create Conditional Access policy templates</li>
+        <li>Automatically apply policies to customer tenants</li>
+        <li>Compare existing policies with templates</li>
+        <li>Export policies for documentation</li>
+        <li>Create and update Named Locations</li>
+      </ul>
+    </div>
+    <div class="bg-white shadow-md rounded-lg p-6">
+      <h3 class="text-xl font-semibold text-gray-800 mb-3">Getting Started</h3>
+      <p class="text-gray-600 mb-4">
+        To begin using the Conditional Access Automator, navigate to the Templates section to view and create policy templates. Then, use the Apply Policies feature to implement these templates in your Microsoft Entra environment.
+      </p>
+      <a href="/templates" class="inline-block bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+        Explore Templates
+      </a>
+    </div>
+  </div>
+</div>
+
+ 
+{% endblock %}

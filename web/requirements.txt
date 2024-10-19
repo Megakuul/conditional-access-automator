@@ -1,0 +1,5 @@
+flask
+msal
+requests
+flask-session
+python-dotenv

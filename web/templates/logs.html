@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Logs
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">API Call Logs</h1>
+    
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+            <thead class="bg-gray-100 border-b">
+                <tr>
+                    <th class="text-left py-3 px-4">Timestamp</th>
+                    <th class="text-left py-3 px-4">Access Token</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr class="border-b">
+                    <td class="py-3 px-4">{{ log.timestamp }}</td>
+                    <td class="py-3 px-4">{{ log.access_token }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
