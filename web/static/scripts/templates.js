@@ -1,72 +1,31 @@
-// Global variable to store template data
-let templates = [
-  {
-    id: "template-id-123",
-    name: "Sample Template",
-    description: "This is a sample template.",
-    state: 0,
-    grant: {
-      allowed_combinations: "Some combination rules"
-    },
-    policy: {
-      action: true,
-      entities: [
-        {
-          include: true,
-          entity_type: 0,
-          name: "John Doe"
-        }
-      ],
-      resources: [
-        {
-          include: true,
-          resource_type: 0,
-          name: "App A"
-        }
-      ],
-      conditions: [
-        {
-          include: true,
-          condition_type: 0,
-          name: "Platform A"
-        }
-      ]
+let templates = null;
+
+
+
+  // Fetch the data from the endpoint
+  fetch('/api/fetch_conditional_access', {
+    method: 'GET',
+    credentials: 'include' // Include cookies in the request
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok ' + response.statusText);
     }
-  },
-  {
-    id: "template-id-456",
-    name: "Another Template",
-    description: "This is another sample template.",
-    state: 1,
-    grant: {
-      allowed_combinations: "Different combination rules"
-    },
-    policy: {
-      action: false,
-      entities: [
-        {
-          include: false,
-          entity_type: 1,
-          name: "Group B"
-        }
-      ],
-      resources: [
-        {
-          include: false,
-          resource_type: 0,
-          name: "App B"
-        }
-      ],
-      conditions: [
-        {
-          include: false,
-          condition_type: 1,
-          name: "Location B"
-        }
-      ]
-    }
-  }
-];
+    return response.json();
+  })
+  .then(data => {
+    // Assign the data to a JavaScript variable
+    templates = data;
+    console.log('Templates:', templates);
+    
+    // You can now use the 'templates' variable in your JavaScript code
+    // For example, update the DOM or process the data as needed
+  })
+  .catch(error => {
+    console.error('There was a problem with the fetch operation:', error);
+  });
+
+
 
 // Function to create a single card
 function createCard(template) {
@@ -760,7 +719,3 @@ function addEventListeners() {
   });
 }
 
-// Initial setup
-document.addEventListener('DOMContentLoaded', () => {
-  refreshGrid();
-});

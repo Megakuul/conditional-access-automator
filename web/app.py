@@ -4,6 +4,7 @@ import msal
 import time  # Import time module
 import base64
 import requests
+from datetime import timedelta
 
 import os
 from dotenv import load_dotenv
@@ -11,6 +12,14 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'your_secure_secret_key'  # Replace with your Flask app's secret key
+
+
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)  # Set session timeout to 60 minutes
+
+# Mark the session as permanent for individual users
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
 
 CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
@@ -101,18 +110,20 @@ def authorized():
 
     # Store user information in the session
     session['user'] = {
-        'name': result.get('id_token_claims').get('name'),  # Ensure 'name' field exists
-        'access_token': access_token
+        'name': result.get('id_token_claims').get('name'),
+        'access_token': access_token,
+        'expires_at': expiration_timestamp  # Store expiration timestamp in session
     }
 
-    response = make_response(redirect(url_for('fetch_conditional_access')))
-    response.set_cookie('access_token', access_token, httponly=True, secure=True)
+    # Create a response that redirects to 'templates' and set cookies on it
+    response = make_response(redirect(url_for('templates')))
+    response.set_cookie('access_token', access_token, httponly=True)
     if expiration_timestamp:
-        response.set_cookie('access_token_exp', str(expiration_timestamp), httponly=True, secure=True)
+        response.set_cookie('access_token_exp', str(expiration_timestamp), httponly=True)
 
     _save_cache(cache)
 
-    return redirect(url_for('home'))  # Redirect to fetch_conditional_access after success
+    return response  # Return the response with cookies set
 
 
 @app.route('/api/fetch_conditional_access')
@@ -152,6 +163,7 @@ def fetch_conditional_access():
             except Exception as e:
                 return jsonify({'error': f"Error decoding template for key '{key}': {str(e)}"}), 500
 
+    print("output: ", decoded_templates)
     return jsonify(decoded_templates)
 
 
