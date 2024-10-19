@@ -2,6 +2,22 @@ package engine
 
 import "github.com/microsoftgraph/msgraph-sdk-go/models"
 
+
+func generateActionCondition(grant models.ConditionalAccessGrantControlsable) (bool, ActionCondition) {
+	action := false
+	actionCondition := ActionCondition{}
+	if grant != nil {
+		if grant.GetOperator() != nil {
+			action = true
+			actionCondition.ChainOperator = *grant.GetOperator()
+			for _, condition := range grant.GetBuiltInControls() {
+				actionCondition.Conditions = append(actionCondition.Conditions, ACTION_CONDITION(condition))
+			}
+		}
+	}
+	return action, actionCondition
+}
+
 func generateEntities(cond models.ConditionalAccessConditionSetable) []Entity {
 	entities := []Entity{}
 
@@ -156,6 +172,17 @@ func generateConditions(cond models.ConditionalAccessConditionSetable) []Conditi
 	}
 
 	return conditions
+}
+
+func updateActionCondition(grant models.ConditionalAccessGrantControlsable, action bool, actionCondition ActionCondition) {
+	if action {
+		grant.SetOperator(&actionCondition.ChainOperator)
+		conditions := []models.ConditionalAccessGrantControl{}
+		for _, condition := range actionCondition.Conditions {
+			conditions = append(conditions, models.ConditionalAccessGrantControl(condition))
+		}
+		grant.SetBuiltInControls(conditions)
+	}
 }
 
 func updateEntities(cond models.ConditionalAccessConditionSetable, entities []Entity) {

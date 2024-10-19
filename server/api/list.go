@@ -30,6 +30,13 @@ func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	accessTokenExp, err := strconv.Atoi(accessTokenExpCookie.Value)
+	if err!=nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Header().Add("Content-Type", "text/plain")
+		w.Write([]byte("failed to read access token expiration"))
+		return
+	}
+	
 	policies, err := h.adapter.FetchPolicies(accessTokenCookie.Value, accessTokenExp)
 	if err!=nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -41,7 +48,7 @@ func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 	res := listResponse{}
 
 	for _, policy := range policies.GetValue() {
-		azureTmpl, err := engine.ParseAzureTemplate(policy)
+		tmpl, err := engine.ParseAzureTemplate(policy)
 		if err!=nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Header().Add("Content-Type", "text/plain")
@@ -49,7 +56,7 @@ func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		jsonTmpl, err := engine.SerializeTemplate(azureTmpl, "json")
+		jsonTmpl, err := engine.SerializeTemplate(tmpl, "json", h.emergencyAccount)
 		if err!=nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Header().Add("Content-Type", "text/plain")

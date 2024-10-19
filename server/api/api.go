@@ -11,11 +11,13 @@ type Api struct {
 }
 
 type ApiHandler struct {
+	emergencyAccount string
 	adapter *adapter.AzureAdapter
 }
 
-func NewApi(addr string) *Api {
+func NewApi(addr, emergencyAccount string) *Api {
 	serveHandler := ApiHandler{
+		emergencyAccount: emergencyAccount,
 		adapter: &adapter.AzureAdapter{},
 	}
 	

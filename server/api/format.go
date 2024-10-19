@@ -58,7 +58,7 @@ func (h* ApiHandler) format(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatTmpl, err := engine.SerializeTemplate(tmpl, req.Format)
+	formatTmpl, err := engine.SerializeTemplate(tmpl, req.Format, h.emergencyAccount)
 	if err!=nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Add("Content-Type", "text/plain")
