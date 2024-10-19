@@ -63,6 +63,7 @@ fetch('/api/fetch_conditional_access', {
       templates = [templates];
     }
 
+    console.log('Templates before:', templates);
     // Since 'templates' is an array of encoded strings, decode each one
     templates = templates.map((encodedString, index) => {
       let base64Url = encodedString;
