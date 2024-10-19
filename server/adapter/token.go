@@ -16,10 +16,10 @@ type TokenInjector struct {
 	expirationDate time.Time
 }
 
-func NewTokenInjector(accessToken string, expirationDate int) *TokenInjector {
+func NewTokenInjector(accessToken string, expirationDate int64) *TokenInjector {
 	return &TokenInjector{
 		accessToken: accessToken,
-		expirationDate: time.Unix(int64(expirationDate), 0),
+		expirationDate: time.Unix(expirationDate, 0),
 	}
 }
 

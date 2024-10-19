@@ -176,6 +176,9 @@ func generateConditions(cond models.ConditionalAccessConditionSetable) []Conditi
 
 func updateActionCondition(grant models.ConditionalAccessGrantControlsable, action bool, actionCondition ActionCondition) {
 	if action {
+		if grant == nil {
+			grant = models.NewConditionalAccessGrantControls()
+		}
 		grant.SetOperator(&actionCondition.ChainOperator)
 		conditions := []models.ConditionalAccessGrantControl{}
 		for _, condition := range actionCondition.Conditions {
@@ -216,7 +219,7 @@ func updateEntities(cond models.ConditionalAccessConditionSetable, entities []En
 		}
 	}
 
-	if cond.GetUsers() != nil {
+	if cond != nil && cond.GetUsers() != nil {
 		cond.GetUsers().SetIncludeUsers(includeUsers)
 		cond.GetUsers().SetExcludeUsers(excludeUsers)
 		cond.GetUsers().SetIncludeGroups(includeGroups)
@@ -241,7 +244,7 @@ func updateResources(cond models.ConditionalAccessConditionSetable, resources []
 		}
 	}
 
-	if cond.GetApplications() != nil {
+	if cond != nil && cond.GetApplications() != nil {
 		cond.GetApplications().SetIncludeApplications(includeApps)
 		cond.GetApplications().SetExcludeApplications(excludeApps)
 	}
@@ -304,15 +307,17 @@ func updateConditions(cond models.ConditionalAccessConditionSetable, conditions 
 		}
 	}
 
-	if cond.GetPlatforms() != nil {
+	if cond != nil && cond.GetPlatforms() != nil {
 		cond.GetPlatforms().SetIncludePlatforms(includePlatforms)
 		cond.GetPlatforms().SetExcludePlatforms(excludePlatforms)
 	}
 
-	if cond.GetLocations() != nil {
+	if cond != nil && cond.GetLocations() != nil {
 		cond.GetLocations().SetIncludeLocations(includeLocations)
 		cond.GetLocations().SetExcludeLocations(excludeLocations)
 	}
 
-	cond.SetClientAppTypes(clientAppTypes)
+	if cond !=nil {
+		cond.SetClientAppTypes(clientAppTypes)
+	}
 }

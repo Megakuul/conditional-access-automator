@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/megakuul/conditional-access-automator/server/engine"
 )
@@ -24,20 +23,8 @@ func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	accessTokenExpCookie, err := r.Cookie("access_token_exp")
-	if err!=nil {
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-	accessTokenExp, err := strconv.Atoi(accessTokenExpCookie.Value)
-	if err!=nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Add("Content-Type", "text/plain")
-		w.Write([]byte("failed to read access token expiration"))
-		return
-	}
 	
-	policies, err := h.adapter.FetchPolicies(accessTokenCookie.Value, accessTokenExp)
+	policies, err := h.adapter.FetchPolicies(accessTokenCookie.Value)
 	if err!=nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Add("Content-Type", "text/plain")

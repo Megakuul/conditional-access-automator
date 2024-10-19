@@ -106,5 +106,5 @@ func SerializeAzureTemplate(body *Template, emergencyAccount string) (models.Con
 	updateResources(azureTmpl.GetConditions(), body.Policy.Resources)
 	updateConditions(azureTmpl.GetConditions(), body.Policy.Conditions)
 
-	return nil, nil
+	return azureTmpl, nil
 }

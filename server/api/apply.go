@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
-
 	"github.com/megakuul/conditional-access-automator/server/engine"
 )
 
@@ -29,18 +27,6 @@ func (h* ApiHandler) apply(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	accessTokenExpCookie, err := r.Cookie("access_token_exp")
-	if err!=nil {
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-	accessTokenExp, err := strconv.Atoi(accessTokenExpCookie.Value)
-	if err!=nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Add("Content-Type", "text/plain")
-		w.Write([]byte("failed to read access token expiration"))
-		return
-	}
 
 	reqRaw, err := io.ReadAll(r.Body)
 	if err!=nil {
@@ -58,7 +44,7 @@ func (h* ApiHandler) apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonTmpl := make([]byte, base64.URLEncoding.EncodedLen(len(req.Template)))
+	jsonTmpl := make([]byte, base64.URLEncoding.DecodedLen(len(req.Template)))
 	_, err = base64.URLEncoding.Decode(jsonTmpl, []byte(req.Template))
 	if err!=nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -83,7 +69,7 @@ func (h* ApiHandler) apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	policy, err := h.adapter.UpdatePolicy(accessTokenCookie.Name, accessTokenExp, azureTmpl)
+	policy, err := h.adapter.UpdatePolicy(accessTokenCookie.Value, azureTmpl)
 	if err!=nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Add("Content-Type", "text/plain")
