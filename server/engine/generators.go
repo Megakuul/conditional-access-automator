@@ -2,55 +2,69 @@ package engine
 
 import "github.com/microsoftgraph/msgraph-sdk-go/models"
 
-
 func generateEntities(cond models.ConditionalAccessConditionSetable) []Entity {
 	entities := []Entity{}
-	for _, entity := range cond.GetUsers().GetExcludeUsers() {
-		entities = append(entities, Entity{
-			Include: false,
-			Type: USER,
-			Name: entity,
-		})
-	}
 
-	for _, entity := range cond.GetUsers().GetIncludeUsers() {
-		entities = append(entities, Entity{
-			Include: true,
-			Type: USER,
-			Name: entity,
-		})
-	}
+	if cond.GetUsers() != nil {
+		if cond.GetUsers().GetExcludeUsers() != nil {
+			for _, entity := range cond.GetUsers().GetExcludeUsers() {
+				entities = append(entities, Entity{
+					Include: false,
+					Type:    USER,
+					Name:    entity,
+				})
+			}
+		}
 
-	for _, entity := range cond.GetUsers().GetExcludeGroups() {
-		entities = append(entities, Entity{
-			Include: false,
-			Type: GROUP,
-			Name: entity,
-		})
-	}
+		if cond.GetUsers().GetIncludeUsers() != nil {
+			for _, entity := range cond.GetUsers().GetIncludeUsers() {
+				entities = append(entities, Entity{
+					Include: true,
+					Type:    USER,
+					Name:    entity,
+				})
+			}
+		}
 
-	for _, entity := range cond.GetUsers().GetIncludeGroups() {
-		entities = append(entities, Entity{
-			Include: true,
-			Type: GROUP,
-			Name: entity,
-		})
-	}
+		if cond.GetUsers().GetExcludeGroups() != nil {
+			for _, entity := range cond.GetUsers().GetExcludeGroups() {
+				entities = append(entities, Entity{
+					Include: false,
+					Type:    GROUP,
+					Name:    entity,
+				})
+			}
+		}
 
-	for _, entity := range cond.GetUsers().GetExcludeRoles() {
-		entities = append(entities, Entity{
-			Include: false,
-			Type: ROLE,
-			Name: entity,
-		})
-	}
+		if cond.GetUsers().GetIncludeGroups() != nil {
+			for _, entity := range cond.GetUsers().GetIncludeGroups() {
+				entities = append(entities, Entity{
+					Include: true,
+					Type:    GROUP,
+					Name:    entity,
+				})
+			}
+		}
 
-	for _, entity := range cond.GetUsers().GetIncludeRoles() {
-		entities = append(entities, Entity{
-			Include: true,
-			Type: ROLE,
-			Name: entity,
-		})
+		if cond.GetUsers().GetExcludeRoles() != nil {
+			for _, entity := range cond.GetUsers().GetExcludeRoles() {
+				entities = append(entities, Entity{
+					Include: false,
+					Type:    ROLE,
+					Name:    entity,
+				})
+			}
+		}
+
+		if cond.GetUsers().GetIncludeRoles() != nil {
+			for _, entity := range cond.GetUsers().GetIncludeRoles() {
+				entities = append(entities, Entity{
+					Include: true,
+					Type:    ROLE,
+					Name:    entity,
+				})
+			}
+		}
 	}
 
 	return entities
@@ -59,71 +73,90 @@ func generateEntities(cond models.ConditionalAccessConditionSetable) []Entity {
 func generateResources(cond models.ConditionalAccessConditionSetable) []Resource {
 	resources := []Resource{}
 
-	for _, resource := range cond.GetApplications().GetExcludeApplications() {
-		resources = append(resources, Resource{
-			Include: false,
-			Type: APP,
-			Name: resource,
-		})
-	}		
+	if cond.GetApplications() != nil {
+		if cond.GetApplications().GetExcludeApplications() != nil {
+			for _, resource := range cond.GetApplications().GetExcludeApplications() {
+				resources = append(resources, Resource{
+					Include: false,
+					Type:    APP,
+					Name:    resource,
+				})
+			}
+		}
 
-	for _, resource := range cond.GetApplications().GetIncludeApplications() {
-		resources = append(resources, Resource{
-			Include: true,
-			Type: APP,
-			Name: resource,
-		})
+		if cond.GetApplications().GetIncludeApplications() != nil {
+			for _, resource := range cond.GetApplications().GetIncludeApplications() {
+				resources = append(resources, Resource{
+					Include: true,
+					Type:    APP,
+					Name:    resource,
+				})
+			}
+		}
 	}
-	
+
 	return resources
 }
 
 func generateConditions(cond models.ConditionalAccessConditionSetable) []Condition {
 	conditions := []Condition{}
 
-	for _, platform := range cond.GetPlatforms().GetExcludePlatforms() {
-		conditions = append(conditions, Condition{
-			Include: false,
-			Type: PLATFORM,
-			Name: platform.String(),
-		})
+	if cond.GetPlatforms() != nil {
+		if cond.GetPlatforms().GetExcludePlatforms() != nil {
+			for _, platform := range cond.GetPlatforms().GetExcludePlatforms() {
+				conditions = append(conditions, Condition{
+					Include: false,
+					Type:    PLATFORM,
+					Name:    platform.String(),
+				})
+			}
+		}
+
+		if cond.GetPlatforms().GetIncludePlatforms() != nil {
+			for _, platform := range cond.GetPlatforms().GetIncludePlatforms() {
+				conditions = append(conditions, Condition{
+					Include: true,
+					Type:    PLATFORM,
+					Name:    platform.String(),
+				})
+			}
+		}
 	}
 
-	for _, platform := range cond.GetPlatforms().GetIncludePlatforms() {
-		conditions = append(conditions, Condition{
-			Include: true,
-			Type: PLATFORM,
-			Name: platform.String(),
-		})
+	if cond.GetLocations() != nil {
+		if cond.GetLocations().GetExcludeLocations() != nil {
+			for _, location := range cond.GetLocations().GetExcludeLocations() {
+				conditions = append(conditions, Condition{
+					Include: false,
+					Type:    LOCATION,
+					Name:    location,
+				})
+			}
+		}
+
+		if cond.GetLocations().GetIncludeLocations() != nil {
+			for _, location := range cond.GetLocations().GetIncludeLocations() {
+				conditions = append(conditions, Condition{
+					Include: true,
+					Type:    LOCATION,
+					Name:    location,
+				})
+			}
+		}
 	}
 
-	for _, location := range cond.GetLocations().GetExcludeLocations() {
-		conditions = append(conditions, Condition{
-			Include: false,
-			Type: LOCATION,
-			Name: location,
-		})
+	if cond.GetClientAppTypes() != nil {
+		for _, clientapp := range cond.GetClientAppTypes() {
+			conditions = append(conditions, Condition{
+				Include: true,
+				Type:    CLIENT_APP,
+				Name:    clientapp.String(),
+			})
+		}
 	}
 
-	for _, location := range cond.GetLocations().GetIncludeLocations() {
-		conditions = append(conditions, Condition{
-			Include: true,
-			Type: LOCATION,
-			Name: location,
-		})
-	}
-
-	for _, clientapp := range cond.GetClientAppTypes() {
-		conditions = append(conditions, Condition{
-			Include: true,
-			Type: CLIENT_APP,
-			Name: clientapp.String(),
-		})
-	}
-	
 	return conditions
 }
-
 
 func updateEntities(cond models.ConditionalAccessConditionSetable, entities []Entity) {
 	includeUsers := []string{}
@@ -156,12 +189,14 @@ func updateEntities(cond models.ConditionalAccessConditionSetable, entities []En
 		}
 	}
 
-	cond.GetUsers().SetIncludeUsers(includeUsers)
-	cond.GetUsers().SetExcludeUsers(excludeUsers)
-	cond.GetUsers().SetIncludeGroups(includeGroups)
-	cond.GetUsers().SetExcludeGroups(excludeGroups)
-	cond.GetUsers().SetIncludeRoles(includeRoles)
-	cond.GetUsers().SetExcludeRoles(excludeRoles)
+	if cond.GetUsers() != nil {
+		cond.GetUsers().SetIncludeUsers(includeUsers)
+		cond.GetUsers().SetExcludeUsers(excludeUsers)
+		cond.GetUsers().SetIncludeGroups(includeGroups)
+		cond.GetUsers().SetExcludeGroups(excludeGroups)
+		cond.GetUsers().SetIncludeRoles(includeRoles)
+		cond.GetUsers().SetExcludeRoles(excludeRoles)
+	}
 }
 
 func updateResources(cond models.ConditionalAccessConditionSetable, resources []Resource) {
@@ -179,10 +214,11 @@ func updateResources(cond models.ConditionalAccessConditionSetable, resources []
 		}
 	}
 
-	cond.GetApplications().SetIncludeApplications(includeApps)
-	cond.GetApplications().SetExcludeApplications(excludeApps)
+	if cond.GetApplications() != nil {
+		cond.GetApplications().SetIncludeApplications(includeApps)
+		cond.GetApplications().SetExcludeApplications(excludeApps)
+	}
 }
-
 
 
 func stringToPlatform(platform string) models.ConditionalAccessDevicePlatform {
@@ -241,9 +277,15 @@ func updateConditions(cond models.ConditionalAccessConditionSetable, conditions 
 		}
 	}
 
-	cond.GetPlatforms().SetIncludePlatforms(includePlatforms)
-	cond.GetPlatforms().SetExcludePlatforms(excludePlatforms)
-	cond.GetLocations().SetIncludeLocations(includeLocations)
-	cond.GetLocations().SetExcludeLocations(excludeLocations)
+	if cond.GetPlatforms() != nil {
+		cond.GetPlatforms().SetIncludePlatforms(includePlatforms)
+		cond.GetPlatforms().SetExcludePlatforms(excludePlatforms)
+	}
+
+	if cond.GetLocations() != nil {
+		cond.GetLocations().SetIncludeLocations(includeLocations)
+		cond.GetLocations().SetExcludeLocations(excludeLocations)
+	}
+
 	cond.SetClientAppTypes(clientAppTypes)
 }

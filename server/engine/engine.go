@@ -19,21 +19,22 @@ func ParseTemplate(body []byte) (*Template, error) {
 }
 
 func SerializeTemplate(body *Template, format string) ([]byte, error) {
+	var err error
 	tmplFormat := []byte{}
 
 	switch format {
 	case "json":
-		err := json.Unmarshal(tmplFormat, body)
+		tmplFormat, err = json.Marshal(body)
 		if err!=nil {
 			return nil, err
 		}
 	case "yaml":
-		err := yaml.Unmarshal(tmplFormat, body)
+		tmplFormat, err = yaml.Marshal(body)
 		if err!=nil {
 			return nil, err
 		}
 	case "xml":
-		err := xml.Unmarshal(tmplFormat, body)
+		tmplFormat, err = xml.Marshal(body)
 		if err!=nil {
 			return nil, err
 		}
@@ -44,12 +45,20 @@ func SerializeTemplate(body *Template, format string) ([]byte, error) {
 	return tmplFormat, nil
 }
 
+func safeString(s *string) string {
+    if s == nil {
+        return ""
+    }
+    return *s
+}
+
+
 func ParseAzureTemplate(body models.ConditionalAccessPolicyable) (*Template, error) {
-	fmt.Println(body)
+	fmt.Println(body.GetBackingStore())
 	return &Template{
-		Id: *body.GetId(),
-		Name: *body.GetDisplayName(),
-		Description: *body.GetDescription(),
+		Id: safeString(body.GetId()),
+		Name: safeString(body.GetDisplayName()),
+		Description: safeString(body.GetDescription()),
 		State: "salami",
 		Grant: Grant{ AllowedCombinations: "" },
 		Policy: Policy{
