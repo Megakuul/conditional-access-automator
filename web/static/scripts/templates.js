@@ -313,6 +313,29 @@ function createEditPopup(template = {}) {
         border: none;
         cursor: pointer;
       }
+      /* Adjusted styles for form layout */
+      .entity-group,
+      .resource-group,
+      .condition-group {
+        margin-bottom: 20px;
+      }
+      .entity-group-inner,
+      .resource-group-inner,
+      .condition-group-inner {
+        display: flex;
+        align-items: center;
+      }
+      .entity-details,
+      .resource-details,
+      .condition-details {
+        margin-left: 20px;
+        flex: 1;
+      }
+      .entity-details .form-group,
+      .resource-details .form-group,
+      .condition-details .form-group {
+        margin-bottom: 10px;
+      }
     </style>
   `;
 
@@ -324,24 +347,25 @@ function createEditPopup(template = {}) {
     return `
       <div class="entity-group" data-index="${index}">
         <hr>
-        <div class="form-group">
-          <label class="form-label">Include:</label>
+        <div class="entity-group-inner">
           <label class="switch">
             <input type="checkbox" name="entities[${index}][include]" ${includeChecked}>
             <span class="slider"></span>
           </label>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Entity Type:</label>
-          <select name="entities[${index}][entity_type]" class="form-input">
-            <option value="0" ${entity.entity_type === 0 ? 'selected' : ''}>USER</option>
-            <option value="1" ${entity.entity_type === 1 ? 'selected' : ''}>GROUP</option>
-            <option value="2" ${entity.entity_type === 2 ? 'selected' : ''}>ROLE</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Name:</label>
-          <input type="text" name="entities[${index}][name]" value="${entity.name || ''}" class="form-input">
+          <div class="entity-details">
+            <div class="form-group">
+              <label class="form-label">Entity Type:</label>
+              <select name="entities[${index}][entity_type]" class="form-input">
+                <option value="0" ${entity.entity_type === 0 ? 'selected' : ''}>USER</option>
+                <option value="1" ${entity.entity_type === 1 ? 'selected' : ''}>GROUP</option>
+                <option value="2" ${entity.entity_type === 2 ? 'selected' : ''}>ROLE</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Name:</label>
+              <input type="text" name="entities[${index}][name]" value="${entity.name || ''}" class="form-input">
+            </div>
+          </div>
         </div>
         <button type="button" class="remove-entity-button remove-button">Remove Entity</button>
       </div>
@@ -353,23 +377,24 @@ function createEditPopup(template = {}) {
     return `
       <div class="resource-group" data-index="${index}">
         <hr>
-        <div class="form-group">
-          <label class="form-label">Include:</label>
+        <div class="resource-group-inner">
           <label class="switch">
             <input type="checkbox" name="resources[${index}][include]" ${includeChecked}>
             <span class="slider"></span>
           </label>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Resource Type:</label>
-          <select name="resources[${index}][resource_type]" class="form-input">
-            <option value="0" ${resource.resource_type === 0 ? 'selected' : ''}>APP</option>
-            <!-- Add more resource types if needed -->
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Name:</label>
-          <input type="text" name="resources[${index}][name]" value="${resource.name || ''}" class="form-input">
+          <div class="resource-details">
+            <div class="form-group">
+              <label class="form-label">Resource Type:</label>
+              <select name="resources[${index}][resource_type]" class="form-input">
+                <option value="0" ${resource.resource_type === 0 ? 'selected' : ''}>APP</option>
+                <!-- Add more resource types if needed -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Name:</label>
+              <input type="text" name="resources[${index}][name]" value="${resource.name || ''}" class="form-input">
+            </div>
+          </div>
         </div>
         <button type="button" class="remove-resource-button remove-button">Remove Resource</button>
       </div>
@@ -381,24 +406,25 @@ function createEditPopup(template = {}) {
     return `
       <div class="condition-group" data-index="${index}">
         <hr>
-        <div class="form-group">
-          <label class="form-label">Include:</label>
+        <div class="condition-group-inner">
           <label class="switch">
             <input type="checkbox" name="conditions[${index}][include]" ${includeChecked}>
             <span class="slider"></span>
           </label>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Condition Type:</label>
-          <select name="conditions[${index}][condition_type]" class="form-input">
-            <option value="0" ${condition.condition_type === 0 ? 'selected' : ''}>PLATFORM</option>
-            <option value="1" ${condition.condition_type === 1 ? 'selected' : ''}>LOCATION</option>
-            <option value="2" ${condition.condition_type === 2 ? 'selected' : ''}>CLIENT_APP</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Name:</label>
-          <input type="text" name="conditions[${index}][name]" value="${condition.name || ''}" class="form-input">
+          <div class="condition-details">
+            <div class="form-group">
+              <label class="form-label">Condition Type:</label>
+              <select name="conditions[${index}][condition_type]" class="form-input">
+                <option value="0" ${condition.condition_type === 0 ? 'selected' : ''}>PLATFORM</option>
+                <option value="1" ${condition.condition_type === 1 ? 'selected' : ''}>LOCATION</option>
+                <option value="2" ${condition.condition_type === 2 ? 'selected' : ''}>CLIENT_APP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Name:</label>
+              <input type="text" name="conditions[${index}][name]" value="${condition.name || ''}" class="form-input">
+            </div>
+          </div>
         </div>
         <button type="button" class="remove-condition-button remove-button">Remove Condition</button>
       </div>
@@ -479,7 +505,7 @@ function createEditPopup(template = {}) {
 
     // Process entities
     const entityGroups = editForm.querySelectorAll('.entity-group');
-    entityGroups.forEach(group => {
+    entityGroups.forEach((group, idx) => {
       const index = group.getAttribute('data-index');
       const include = formData.get(`entities[${index}][include]`) === 'on';
       const entity_type = parseInt(formData.get(`entities[${index}][entity_type]`), 10);
