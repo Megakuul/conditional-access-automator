@@ -459,3 +459,7 @@ body {
     background-color: #ccc;
     border-radius: 50%;
   }
+
+  #content-container {
+    margin-top: 4rem;
+  }
