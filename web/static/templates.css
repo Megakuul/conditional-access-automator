@@ -224,7 +224,7 @@ body {
     transition: transform 0.15s ease;
   }
   
-  .icon:hover:not(.icon-disabled), .trash-icon:hover:not(.icon-disabled) {
+  .icon:hover:not(.icon-disabled), .icon-button:hover .icon:not(.icon-disabled){
     transform: scale(1.15);
   }
   
@@ -234,7 +234,7 @@ body {
     color: #718096;
   }
   
-  .trash-icon:hover {
+  .trash-icon:hover, .icon-button:hover .trash-icon  {
     color: #454f5e;
     rotate: 5deg;
   }
@@ -319,7 +319,7 @@ body {
   }
   
   input:checked + .slider:before {
-    transform: translateX(32px);
+    transform: translateX(12px);
   }
   
   .remove-button {
@@ -336,6 +336,7 @@ body {
     box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px;
     padding: 1.5rem;
     border-radius: 0.5rem;
+    position: relative;
   }
   
   .entity-group-inner,
@@ -344,6 +345,7 @@ body {
     display: flex;
     align-items: flex-start;
     margin-bottom: 10px;
+    align-items: center;
   }
   
   .slider-container {
@@ -461,7 +463,7 @@ body {
   }
 
   #content-container {
-    margin-top: 1.5rem;
+    margin-top: 4rem;
   }
 
   #action-conditions-container {
@@ -516,3 +518,13 @@ body {
     background-color: #f7fafc;
   }
   
+  .corner-trash {
+    position: absolute;
+    top: 10px;
+    right: 11px;
+  }
+
+  .form-section {
+    font-weight: bold;
+    font-size: 1.2rem;
+}

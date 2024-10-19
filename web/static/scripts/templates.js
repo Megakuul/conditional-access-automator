@@ -1,5 +1,4 @@
-
-// Rest of your code remains the same...
+// Enumerations for action conditions and condition types
 const ACTION_CONDITION_ENUM = {
   0: 'MFA',
   1: 'COMPLIANT_CLIENT',
@@ -26,10 +25,145 @@ const CONDITION_TYPE_VALUES = Object.entries(CONDITION_TYPE_ENUM).map(([key, val
   label: value,
 }));
 
-
-
-
-
+// Define the example templates
+const exampleTemplates = [
+  {
+    "id": "abcdef12-3456-7890-abcd-ef1234567890",
+    "name": "CA002-GeoBlock-GlobalAdmins-Switzerland",
+    "state": 2,
+    "description": "Block Global Administrators outside of Switzerland",
+    "policy": {
+      "action": false,
+      "action_condition": {
+        "chain_operator": "AND",
+        "conditions": [1]
+      },
+      "entities": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "global-admin-group-id"
+        }
+      ],
+      "resources": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "All"
+        }
+      ],
+      "conditions": [
+        {
+          "include": false,
+          "type": 2,
+          "name": "Switzerland"
+        }
+      ]
+    }
+  },
+  {
+    "id": "56789012-3456-abcd-ef12-34567890abcd",
+    "name": "CA003-GeoBlock-NormalUsers-SpecifiedCountries",
+    "state": 2,
+    "description": "Block normal users outside of Liechtenstein, Austria, France, Switzerland, Germany",
+    "policy": {
+      "action": false,
+      "action_condition": {
+        "chain_operator": "AND",
+        "conditions": [1]
+      },
+      "entities": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "normal-users-group-id"
+        }
+      ],
+      "resources": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "All"
+        }
+      ],
+      "conditions": [
+        {
+          "include": false,
+          "type": 2,
+          "name": ["Liechtenstein", "Austria", "France", "Switzerland", "Germany"]
+        }
+      ]
+    }
+  },
+  {
+    "id": "7890abcd-1234-5678-90ef-1234567890ab",
+    "name": "CA004-Block-LegacyAuthentication",
+    "state": 2,
+    "description": "Block legacy authentication for all users",
+    "policy": {
+      "action": false,
+      "action_condition": {
+        "chain_operator": "AND",
+        "conditions": [1]
+      },
+      "entities": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "AllUsers"
+        }
+      ],
+      "resources": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "All"
+        }
+      ],
+      "conditions": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "legacy-authentication"
+        }
+      ]
+    }
+  },
+  {
+    "id": "90123456-7890-abcd-ef12-34567890abcd",
+    "name": "CA005-MFA-Registration-Outside-NamedLocations",
+    "state": 2,
+    "description": "MFA for registration of MFA methods outside of specified Named Locations",
+    "policy": {
+      "action": true,
+      "action_condition": {
+        "chain_operator": "AND",
+        "conditions": [1]
+      },
+      "entities": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "AllUsers"
+        }
+      ],
+      "resources": [
+        {
+          "include": true,
+          "type": 0,
+          "name": "MFA-Registration"
+        }
+      ],
+      "conditions": [
+        {
+          "include": false,
+          "type": 2,
+          "name": "named-locations-id"
+        }
+      ]
+    }
+  }
+];
 
 let templates = null;
 
@@ -106,23 +240,9 @@ fetch('/api/fetch_conditional_access', {
     console.error('There was a problem with the fetch operation:', error);
   });
 
-// Rest of your code remains the same...
-
-
-
-
-
-
-
-
-
-
-
-
 // Define the functions to be called
 function processTemplate(templateJson) {
   console.log('Processing template:', templateJson);
-
 
   fetch('/api/apply', {
     method: 'POST',
@@ -130,11 +250,10 @@ function processTemplate(templateJson) {
         'Content-Type': 'application/json'
     },
     body: JSON.stringify(templateJson)
-})
-.then(response => response.json())
-.then(templateJson => console.log(templateJson))
-.catch(error => console.error('Error:', error));
-
+  })
+  .then(response => response.json())
+  .then(templateJson => console.log(templateJson))
+  .catch(error => console.error('Error:', error));
 }
 
 function deleteTemplateById(id) {
@@ -175,19 +294,83 @@ function createAddNewCard() {
   `;
 }
 
+// Function to create the "Add Example" card
+function createAddExampleCard() {
+  return `
+    <div id="add-example-card" class="add-new-card">
+      <div class="add-new-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" class="add-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <!-- Icon for examples -->
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0-16l-4 4m4-4l4 4" />
+        </svg>
+        <span class="add-new-text">Add Example Template</span>
+      </div>
+    </div>
+  `;
+}
+
 // Function to generate the entire grid
 function generateCardGrid(templates) {
   const cardsHtml = templates.map(template => createCard(template)).join('');
   const addNewCardHtml = createAddNewCard();
+  const addExampleCardHtml = createAddExampleCard();
 
   return `
     <div id="main-content" class="container">
       <div class="card-grid">
         ${cardsHtml}
         ${addNewCardHtml}
+        ${addExampleCardHtml}
       </div>
     </div>
   `;
+}
+
+// Function to create example selection popup
+function createExampleSelectionPopup() {
+  const popupHtml = `
+    <div id="example-selection-popup" class="popup fixed inset-0 flex items-center justify-center z-50">
+      <div class="popup-content bg-white rounded-lg shadow-lg w-1/2 max-w-3xl p-6">
+        <div class="popup-header flex justify-between items-center mb-4">
+          <h2 class="popup-title text-xl font-semibold">Select an Example Template</h2>
+          <button id="close-example-popup" class="close-button text-gray-600 hover:text-gray-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <!-- Close icon -->
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="popup-form overflow-auto max-h-96">
+          <ul class="example-list">
+            ${exampleTemplates.map((template, index) => `
+              <li class="example-item p-4 border-b hover:bg-gray-100 cursor-pointer" data-index="${index}">
+                <h3 class="text-lg font-medium">${template.name}</h3>
+                <p class="text-gray-600">${template.description}</p>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      </div>
+      <div class="popup-overlay fixed inset-0 bg-black opacity-50"></div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', popupHtml);
+  toggleBlur(true);
+
+  // Event listeners for closing the popup and selecting an example
+  document.getElementById('close-example-popup').addEventListener('click', () => {
+    document.getElementById('example-selection-popup').remove();
+    toggleBlur(false);
+  });
+
+  document.querySelectorAll('.example-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const index = parseInt(item.getAttribute('data-index'), 10);
+      const selectedTemplate = exampleTemplates[index];
+      document.getElementById('example-selection-popup').remove();
+      createEditPopup(selectedTemplate);
+    });
+  });
 }
 
 // Function to create edit/create popup
@@ -208,69 +391,70 @@ function createEditPopup(template = {}) {
   const conditionsHtml = conditions.map((condition, index) => createConditionFormGroup(condition, index)).join('');
 
   const popupHtml = `
-    <div id="edit-popup" class="popup">
-      <div class="popup-content">
-        <div class="popup-header">
-          <h2 class="popup-title">${title}</h2>
-          <button id="close-popup" class="close-button">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div id="edit-popup" class="popup fixed inset-0 flex items-center justify-center z-50">
+      <div class="popup-content bg-white rounded-lg shadow-lg w-3/4 max-w-4xl p-6 overflow-y-auto max-h-screen">
+        <div class="popup-header flex justify-between items-center mb-4">
+          <h2 class="popup-title text-xl font-semibold">${title}</h2>
+          <button id="close-popup" class="close-button text-gray-600 hover:text-gray-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <!-- Close icon -->
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div id="pretty-view" class="popup-form overflow-container overflow-container">
-          <form id="edit-form" class="form-grid">
+        <div id="pretty-view" class="popup-form overflow-container">
+          <form id="edit-form" class="form-grid grid grid-cols-1 gap-4">
             <!-- Existing form fields -->
             <div class="form-group">
-              <label for="id" class="form-label">ID</label>
-              <input type="text" id="id" name="id" value="${template.id || ''}" class="form-input" required ${isNewTemplate ? '' : 'readonly'}>
+              <label for="id" class="form-label block text-sm font-medium text-gray-700">ID</label>
+              <input type="text" id="id" name="id" value="${template.id || ''}" class="form-input mt-1 block w-full" required ${isNewTemplate ? '' : 'readonly'}>
             </div>
             <div class="form-group">
-              <label for="name" class="form-label">Name</label>
-              <input type="text" id="name" name="name" value="${template.name || ''}" class="form-input" required>
+              <label for="name" class="form-label block text-sm font-medium text-gray-700">Name</label>
+              <input type="text" id="name" name="name" value="${template.name || ''}" class="form-input mt-1 block w-full" required>
             </div>
             <div class="form-group">
-              <label for="state" class="form-label">State</label>
-              <select id="state" name="state" class="form-input" required>
+              <label for="state" class="form-label block text-sm font-medium text-gray-700">State</label>
+              <select id="state" name="state" class="form-input mt-1 block w-full" required>
                 <option value="0" ${template.state === 0 ? 'selected' : ''}>ON</option>
                 <option value="1" ${template.state === 1 ? 'selected' : ''}>OFF</option>
                 <option value="2" ${template.state === 2 ? 'selected' : ''}>REPORT</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="description" class="form-label">Description</label>
-              <input id="description" name="description" class="form-input" value="${template.description || ''}">
+              <label for="description" class="form-label block text-sm font-medium text-gray-700">Description</label>
+              <input id="description" name="description" class="form-input mt-1 block w-full" value="${template.description || ''}">
             </div>
             <!-- Policy Action Slider -->
             <div class="form-group">
-              <label class="form-label">Allow Policy Action</label>
-              <div class="slider-container dummy-container">
-                <label class="form-label hidden">${policyAction ? 'Allow' : 'Deny'}</label>
-                <label class="switch">
-                  <input type="checkbox" id="action" name="action" ${policyAction ? 'checked' : ''}>
-                  <span class="slider"></span>
+              <label class="form-section block text-gray-700">Allow Policy Action</label>
+              <div class="slider-container flex items-center">
+                <label class="form-label ml-2 mr-2">${policyAction ? 'Allow' : 'Deny'}</label>
+                <label class="switch relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                  <input type="checkbox" id="action" name="action" ${policyAction ? 'checked' : ''} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
+                  <span class="slider round"></span>
                 </label>
               </div>
             </div>
             <!-- Action Conditions and Chain Operator (Visible only when Allow Policy Action is enabled) -->
             <div id="action-conditions-section" class="${policyAction ? '' : 'hidden'}">
               <div class="form-group">
-                <label for="chain_operator" class="form-label">Chain Operator</label>
-                <select id="chain_operator" name="chain_operator" class="form-input">
+                <label for="chain_operator" class="form-label block text-sm font-medium text-gray-700">Chain Operator</label>
+                <select id="chain_operator" name="chain_operator" class="form-input mt-1 block w-full">
                   <option value="AND" ${chainOperator === 'AND' ? 'selected' : ''}>AND</option>
                   <option value="OR" ${chainOperator === 'OR' ? 'selected' : ''}>OR</option>
                 </select>
               </div>
               <div class="form-group full-width">
-                <label class="form-section">Action Conditions</label>
-                <div id="action-conditions-container">
+                <label class="form-section block text-gray-700">Action Conditions</label>
+                <div id="action-conditions-container" class="mt-2">
                   ${createActionConditionsCheckboxes(selectedConditions)}
                 </div>
               </div>
             </div>
             <!-- Entities Section -->
             <div class="form-group full-width">
-              <label class="form-section">Entities</label>
+              <label class="form-section block text-gray-700">Entities</label>
               <div id="entities-container">
                 ${entitiesHtml}
               </div>
@@ -278,7 +462,7 @@ function createEditPopup(template = {}) {
             </div>
             <!-- Resources Section -->
             <div class="form-group full-width">
-              <label class="form-section">Resources</label>
+              <label class="form-section block text-sm font-medium text-gray-700">Resources</label>
               <div id="resources-container">
                 ${resourcesHtml}
               </div>
@@ -286,7 +470,7 @@ function createEditPopup(template = {}) {
             </div>
             <!-- Conditions Section -->
             <div class="form-group full-width">
-              <label class="form-section">Conditions</label>
+              <label class="form-section block text-gray-700">Conditions</label>
               <div id="conditions-container">
                 ${conditionsHtml}
               </div>
@@ -294,39 +478,39 @@ function createEditPopup(template = {}) {
             </div>
           </form>
         </div>
-        <div id="json-view" class="hidden popup-form overflow-container">
-          <textarea id="json-edit" class="form-input h-full overflow-container">${JSON.stringify(template, null, 2)}</textarea>
+        <div id="json-view" class="hidden popup-form">
+          <textarea id="json-edit" class="overflow-container form-input h-full w-full p-2 border rounded">${JSON.stringify(template, null, 2)}</textarea>
         </div>
-        <div class="popup-footer">
+        <div class="popup-footer flex justify-between mt-4">
           <div class="flex items-center space-x-2">
             <div class="relative group">
-              <button id="swap-view" class="icon-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="ml-3 h-9 w-9 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <button id="swap-view" class="icon-button p-2 bg-gray-200 rounded hover:bg-gray-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <!-- Icon for swapping views -->
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
               </button>
             </div>
             <div class="relative group">
-              <button id="download-template" class="icon-button">
-                <!-- Use a download icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="ml-3 h-9 w-9 icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <!-- Download icon -->
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 13l5 5 5-5m0-8v12" />
+              <button id="download-template" class="icon-button p-2 bg-gray-200 rounded hover:bg-gray-300">
+                <!-- Use the provided download icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon" viewBox="0 0 24 24" stroke="currentColor" fill="none">
+                  <!-- New Download icon -->
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </button>
-              <div id="download-menu" class="download-menu hidden">
-                <button data-format="json">JSON</button>
-                <button data-format="yaml">YAML</button>
-                <button data-format="xml">XML</button>
+              <div id="download-menu" class="download-menu hidden absolute bg-white border rounded mt-2 right-0 shadow-lg">
+                <button data-format="json" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">JSON</button>
+                <button data-format="yaml" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">YAML</button>
+                <button data-format="xml" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">XML</button>
               </div>
             </div>
           </div>
           <div class="flex items-center space-x-2">
             ${isNewTemplate ? '' : `
             <div class="relative group">
-              <button id="delete-entry" class="icon-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <button id="delete-entry" class="icon-button p-2 bg-red-200 rounded hover:bg-red-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <!-- Trash icon -->
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
@@ -338,8 +522,8 @@ function createEditPopup(template = {}) {
             </div>
             `}
             <div class="relative group">
-              <button id="commit-changes" class="icon-button">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 icon trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <button id="commit-changes" class="icon-button p-2 bg-green-200 rounded hover:bg-green-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 icon check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <!-- Check icon -->
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
@@ -348,21 +532,21 @@ function createEditPopup(template = {}) {
           </div>
         </div>
       </div>
-      <div class="popup-overlay"></div>
+      <div class="popup-overlay fixed inset-0 bg-black opacity-50"></div>
     </div>
   `;
 
   document.body.insertAdjacentHTML('beforeend', popupHtml);
+  toggleBlur(true);
 
   // Function to create checkboxes for action conditions
   function createActionConditionsCheckboxes(selectedConditions) {
     return ACTION_CONDITION_VALUES.map(condition => {
       const isChecked = selectedConditions.includes(condition.value) ? 'checked' : '';
       return `
-        <label class="checkbox-container">
-          <input type="checkbox" name="action_conditions" value="${condition.value}" ${isChecked}>
-          <span class="checkmark"></span>
-          ${condition.label}
+        <label class="checkbox-container inline-flex items-center mt-2">
+          <input type="checkbox" name="action_conditions" value="${condition.value}" ${isChecked} class="form-checkbox h-4 w-4 text-blue-600">
+          <span class="ml-2 text-gray-700">${condition.label}</span>
         </label>
       `;
     }).join('');
@@ -371,12 +555,13 @@ function createEditPopup(template = {}) {
   // Function to create the "Add Entry" buttons
   function createAddEntryButton(type) {
     return `
-      <div id="add-${type}-button" class="add-entry-card">
+      <div id="add-${type}-button" class="add-entry-card flex items-center justify-center mt-0 p-4 border border-dashed rounded cursor-pointer hover:bg-gray-100">
         <div class="add-entry-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 add-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 add-icon text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
         </div>
+        <span class="ml-2 text-gray-600">Add ${type.charAt(0).toUpperCase() + type.slice(1)}</span>
       </div>
     `;
   }
@@ -385,16 +570,18 @@ function createEditPopup(template = {}) {
   function createEntityFormGroup(entity = {}, index) {
     const includeChecked = entity.include ? 'checked' : '';
     return `
-      <div class="entity-group" data-index="${index}">
+      <div class="entity-group border p-4 rounded mt-4" data-index="${index}">
         <div class="entity-group-inner">
-          <div class="slider-container">
-            <label class="form-label">Include:</label>
-            <label class="switch">
-              <input type="checkbox" name="entities[${index}][include]" ${includeChecked}>
-              <span class="slider"></span>
-            </label>
-            <button type="button" class="remove-entity-button remove-button">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mt-4 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="slider-container flex items-center justify-between">
+            <div class="flex flex-col items-center">
+              <label class="form-label ml-2 mr-2">Include</label>
+              <label class="switch relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" name="entities[${index}][include]" ${includeChecked} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <button type="button" class="remove-entity-button remove-button text-red-600 hover:text-red-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon corner-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
@@ -404,17 +591,18 @@ function createEditPopup(template = {}) {
               </svg>
             </button>
           </div>
-          <div class="entity-details">
+          <div class="entity-details mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="form-group">
-              <label class="form-label">Entity Type:</label>
-              <select name="entities[${index}][entity_type]" class="form-input">
+              <label class="form-label block text-sm font-medium text-gray-700">Entity Type:</label>
+              <select name="entities[${index}][entity_type]" class="form-input mt-1 block w-full">
                 <option value="0" ${entity.type === 0 ? 'selected' : ''}>USER</option>
                 <option value="1" ${entity.type === 1 ? 'selected' : ''}>GROUP</option>
                 <option value="2" ${entity.type === 2 ? 'selected' : ''}>ROLE</option>
               </select>
             </div>
             <div class="form-group">
-              <input placeholder="Name" placeholder="Name" type="text" name="entities[${index}][name]" value="${entity.name || ''}" class="form-input">
+              <label class="form-label block text-sm font-medium text-gray-700">Name:</label>
+              <input placeholder="Name" type="text" name="entities[${index}][name]" value="${entity.name || ''}" class="form-input mt-1 block w-full">
             </div>
           </div>
         </div>
@@ -425,16 +613,18 @@ function createEditPopup(template = {}) {
   function createResourceFormGroup(resource = {}, index) {
     const includeChecked = resource.include ? 'checked' : '';
     return `
-      <div class="resource-group" data-index="${index}">
+      <div class="resource-group border p-4 rounded mt-4" data-index="${index}">
         <div class="resource-group-inner">
-          <div class="slider-container">
-            <label class="form-label">Include:</label>
-            <label class="switch">
-              <input type="checkbox" name="resources[${index}][include]" ${includeChecked}>
-              <span class="slider"></span>
-            </label>
-            <button type="button" class="remove-resource-button remove-button">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mt-4 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="slider-container flex items-center justify-between">
+            <div class="flex flex-col items-center">
+              <label class="form-label ml-2 mr-2">Include</label>
+              <label class="switch relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" name="resources[${index}][include]" ${includeChecked} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <button type="button" class="remove-resource-button remove-button text-red-600 hover:text-red-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon corner-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
@@ -444,16 +634,17 @@ function createEditPopup(template = {}) {
               </svg>
             </button>
           </div>
-          <div class="resource-details">
+          <div class="resource-details mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="form-group">
-              <label class="form-label">Resource Type:</label>
-              <select name="resources[${index}][resource_type]" class="form-input">
+              <label class="form-label block text-sm font-medium text-gray-700">Resource Type:</label>
+              <select name="resources[${index}][resource_type]" class="form-input mt-1 block w-full">
                 <option value="0" ${resource.type === 0 ? 'selected' : ''}>APP</option>
                 <!-- Add more resource types if needed -->
               </select>
             </div>
             <div class="form-group">
-              <input placeholder="Name" type="text" name="resources[${index}][name]" value="${resource.name || ''}" class="form-input">
+              <label class="form-label block text-sm font-medium text-gray-700">Name:</label>
+              <input placeholder="Name" type="text" name="resources[${index}][name]" value="${resource.name || ''}" class="form-input mt-1 block w-full">
             </div>
           </div>
         </div>
@@ -464,16 +655,18 @@ function createEditPopup(template = {}) {
   function createConditionFormGroup(condition = {}, index) {
     const includeChecked = condition.include ? 'checked' : '';
     return `
-      <div class="condition-group" data-index="${index}">
+      <div class="condition-group border p-4 rounded mt-4" data-index="${index}">
         <div class="condition-group-inner">
-          <div class="slider-container">
-            <label class="form-label">Include:</label>
-            <label class="switch">
-              <input type="checkbox" name="conditions[${index}][include]" ${includeChecked}>
-              <span class="slider"></span>
-            </label>
-            <button type="button" class="remove-condition-button remove-button">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mt-4 trash-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="slider-container flex items-center justify-between">
+            <div class="flex flex-col items-center">
+              <label class="form-label ml-2 mr-2">Include</label>
+              <label class="switch relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" name="conditions[${index}][include]" ${includeChecked} class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <button type="button" class="remove-condition-button remove-button text-red-600 hover:text-red-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 trash-icon corner-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <!-- Trash icon -->
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0
@@ -483,17 +676,18 @@ function createEditPopup(template = {}) {
               </svg>
             </button>
           </div>
-          <div class="condition-details">
+          <div class="condition-details mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="form-group">
-              <label class="form-label">Condition Type:</label>
-              <select name="conditions[${index}][condition_type]" class="form-input">
+              <label class="form-label block text-sm font-medium text-gray-700">Condition Type:</label>
+              <select name="conditions[${index}][condition_type]" class="form-input mt-1 block w-full">
                 ${CONDITION_TYPE_VALUES.map(ct => `
                   <option value="${ct.value}" ${condition.type === ct.value ? 'selected' : ''}>${ct.label}</option>
                 `).join('')}
               </select>
             </div>
             <div class="form-group">
-              <input placeholder="Name" type="text" name="conditions[${index}][name]" value="${condition.name || ''}" class="form-input">
+              <label class="form-label block text-sm font-medium text-gray-700">Name:</label>
+              <input placeholder="Name" type="text" name="conditions[${index}][name]" value="${condition.name || ''}" class="form-input mt-1 block w-full">
             </div>
           </div>
         </div>
@@ -793,7 +987,7 @@ function createEditPopup(template = {}) {
     processTemplate(updatedTemplate);
 
     // Existing code to update templates array and refresh the grid
-    if (isNewTemplate) {
+    if (isNewTemplate || templates.findIndex(t => t.id === updatedTemplate.id) === -1) {
       templates.push(updatedTemplate);
     } else {
       const index = templates.findIndex(t => t.id === template.id);
@@ -1023,13 +1217,19 @@ function addEventListeners() {
     icon.addEventListener('click', () => {
       const template = templates[index];
       createEditPopup(template);
-      toggleBlur(true);
     });
   });
 
   const addNewCard = document.getElementById('add-new-card');
   addNewCard.addEventListener('click', () => {
     createEditPopup();
-    toggleBlur(true);
+  });
+
+  const addExampleCard = document.getElementById('add-example-card');
+  addExampleCard.addEventListener('click', () => {
+    createExampleSelectionPopup();
   });
 }
+
+// Initial call to set up event listeners
+//refreshGrid();
