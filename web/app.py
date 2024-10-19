@@ -148,23 +148,46 @@ def fetch_conditional_access():
         response = requests.get(templates_url, cookies=cookies)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        return jsonify({'error': f"Error fetching templates: {str(e)}"}), 500
+        if e.response is not None:
+            # Access the entire response
+            response = e.response
+            status_code = response.status_code
+            headers = response.headers
+            body = response.text  # Or response.content for raw bytes
+            
+            # Print or log the response details
+            print("Exception occurred:", e)
+            print("Status Code:", status_code)
+            print("Headers:", headers)
+            print("Body:", body)
+            
+            # Optionally, include the response body in your JSON response
+            return jsonify({
+                'error': f"Error fetching templates: {str(e)}",
+                'status_code': status_code,
+                'headers': dict(headers),
+                'body': body
+            }), 500
+        else:
+            # No response was received (e.g., network error)
+            print("No response received:", e)
+            return jsonify({'error': f"Error fetching templates: {str(e)} + Body: {str(body)}"}), 500
 
     response_data = response.json()
 
-    decoded_templates = {}
-    for key, value in response_data.items():
-        if isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
-            value = value[0]
+    #decoded_templates = {}
+    #for key, value in response_data.items():
+     #   if isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
+      #      value = value[0]
         
-        if isinstance(value, str):
-            try:
-                decoded_templates[key] = base64.urlsafe_b64decode(value).decode('utf-8')
-            except Exception as e:
-                return jsonify({'error': f"Error decoding template for key '{key}': {str(e)}"}), 500
+      #  if isinstance(value, str):
+      #      try:
+      #          decoded_templates[key] = base64.urlsafe_b64decode(value).decode('utf-8')
+      #      except Exception as e:
+      #          return jsonify({'error': f"Error decoding template for key '{key}': {str(e)}"}), 500
 
-    print("output: ", decoded_templates)
-    return jsonify(decoded_templates)
+    print("output: ", response_data)
+    return jsonify(response_data)
 
 
 @app.route('/api/apply/<template_data>', methods=['GET'])
