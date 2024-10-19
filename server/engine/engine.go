@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 
-	"github.com/microsoftgraph/msgraph-sdk-go/models"
 	"gopkg.in/yaml.v3"
 )
 
@@ -69,42 +68,48 @@ func SerializeTemplate(body *Template, format, emergencyAccount string) ([]byte,
 	return tmplFormat, nil
 }
 
-
-func ParseAzureTemplate(body models.ConditionalAccessPolicyable) (*Template, error) {
-	action, actionCondition := generateActionCondition(body.GetGrantControls())
+// ParseAzureTemplate parses the Azure policy from byte slice map
+func ParseAzureTemplate(bodyMap map[string]interface{}) (*Template, error) {
 	
+	action, actionCondition := generateActionCondition(bodyMap["grantControls"].(map[string]interface{}))
+
 	return &Template{
-		Id: safeString(body.GetId()),
-		Name: safeString(body.GetDisplayName()),
-		Description: safeString(body.GetDescription()),
-		State: STATE_TYPE(*body.GetState()),
+		Id:          safeString(bodyMap["id"].(*string)),
+		Name:        safeString(bodyMap["displayName"].(*string)),
+		Description: safeString(bodyMap["description"].(*string)),
+		State:       STATE_TYPE(bodyMap["state"].(int)),
 		Policy: Policy{
-			Action: action,
+			Action:          action,
 			ActionCondition: actionCondition,
-			Entities: generateEntities(body.GetConditions()),
-			Resources: generateResources(body.GetConditions()),
-			Conditions: generateConditions(body.GetConditions()),
+			Entities:        generateEntities(bodyMap["conditions"].(map[string]interface{})),
+			Resources:       generateResources(bodyMap["conditions"].(map[string]interface{})),
+			Conditions:      generateConditions(bodyMap["conditions"].(map[string]interface{})),
 		},
 	}, nil
 }
 
-
-func SerializeAzureTemplate(body *Template, emergencyAccount string) (models.ConditionalAccessPolicyable, error) {
+// SerializeAzureTemplate serializes the Template into a byte slice for Azure policy
+func SerializeAzureTemplate(body *Template, emergencyAccount string) (string, []byte, error) {
 	excludeEmergencyAccount(body, emergencyAccount)
-	
-	azureTmpl := models.NewConditionalAccessPolicy()
-	// azureTmpl.SetId(&body.Id)
-	azureTmpl.SetDisplayName(&body.Name)
-	azureTmpl.SetDescription(&body.Description)
-	
-	var status models.ConditionalAccessPolicyState = models.ConditionalAccessPolicyState(body.State)
-	azureTmpl.SetState(&status)
 
-	updateActionCondition(azureTmpl.GetGrantControls(), body.Policy.Action, body.Policy.ActionCondition)
-	
-	updateEntities(azureTmpl.GetConditions(), body.Policy.Entities)
-	updateResources(azureTmpl.GetConditions(), body.Policy.Resources)
-	updateConditions(azureTmpl.GetConditions(), body.Policy.Conditions)
+	azureTmpl := make(map[string]interface{})
+	azureTmpl["displayName"] = body.Name
+	azureTmpl["description"] = body.Description
+	azureTmpl["state"] = body.State
 
-	return azureTmpl, nil
+	grant := make(map[string]interface{})
+	updateActionCondition(grant, body.Policy.Action, body.Policy.ActionCondition)
+	azureTmpl["grantControls"] = grant
+
+	conditions := make(map[string]interface{})
+	updateEntities(conditions, body.Policy.Entities)
+	updateResources(conditions, body.Policy.Resources)
+	updateConditions(conditions, body.Policy.Conditions)
+	azureTmpl["conditions"] = conditions
+
+	outTmpl, err := json.Marshal(azureTmpl)
+	if err!=nil {
+		return "", nil, err
+	}
+	return body.Id, outTmpl, nil
 }

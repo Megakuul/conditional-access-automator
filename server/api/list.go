@@ -31,10 +31,10 @@ func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("failed to fetch policies: %v", err)))
 		return
 	}
-
+	
 	res := listResponse{}
 
-	for _, policy := range policies.GetValue() {
+	for _, policy := range policies {
 		tmpl, err := engine.ParseAzureTemplate(policy)
 		if err!=nil {
 			w.WriteHeader(http.StatusInternalServerError)

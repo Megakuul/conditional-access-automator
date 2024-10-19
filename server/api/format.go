@@ -49,7 +49,7 @@ func (h* ApiHandler) format(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("cannot base64 decode the template body"))
 		return
 	}
-
+	
 	tmpl, err := engine.ParseTemplate(jsonTmpl)
 	if err!=nil {
 		w.WriteHeader(http.StatusBadRequest)

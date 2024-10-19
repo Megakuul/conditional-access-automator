@@ -27,7 +27,7 @@ func (h* ApiHandler) apply(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-
+	
 	reqRaw, err := io.ReadAll(r.Body)
 	if err!=nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -61,7 +61,7 @@ func (h* ApiHandler) apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	azureTmpl, err := engine.SerializeAzureTemplate(tmpl, h.emergencyAccount)
+	azureTmplId, azureTmpl, err := engine.SerializeAzureTemplate(tmpl, h.emergencyAccount)
 	if err!=nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Add("Content-Type", "text/plain")
@@ -69,7 +69,7 @@ func (h* ApiHandler) apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	policy, err := h.adapter.UpdatePolicy(accessTokenCookie.Value, azureTmpl)
+	policy, err := h.adapter.UpdatePolicy(accessTokenCookie.Value, azureTmplId, azureTmpl)
 	if err!=nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Add("Content-Type", "text/plain")

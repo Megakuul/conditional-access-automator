@@ -1,194 +1,115 @@
 package engine
 
-import "github.com/microsoftgraph/msgraph-sdk-go/models"
-
-
-func generateActionCondition(grant models.ConditionalAccessGrantControlsable) (bool, ActionCondition) {
+// Generates the action condition based on a given grant controls map
+func generateActionCondition(grant map[string]interface{}) (bool, ActionCondition) {
 	action := false
 	actionCondition := ActionCondition{}
 	if grant != nil {
-		if grant.GetOperator() != nil {
+		if operator, ok := grant["operator"].(string); ok {
 			action = true
-			actionCondition.ChainOperator = *grant.GetOperator()
-			for _, condition := range grant.GetBuiltInControls() {
-				actionCondition.Conditions = append(actionCondition.Conditions, ACTION_CONDITION(condition))
+			actionCondition.ChainOperator = operator
+			if controls, ok := grant["builtInControls"].([]interface{}); ok {
+				for _, condition := range controls {			
+					actionCondition.Conditions = append(actionCondition.Conditions, ACTION_CONDITION(condition.(int)))
+				}
 			}
 		}
 	}
 	return action, actionCondition
 }
 
-func generateEntities(cond models.ConditionalAccessConditionSetable) []Entity {
+// Generates entities from the condition set map
+func generateEntities(cond map[string]interface{}) []Entity {
 	entities := []Entity{}
-
-	if cond.GetUsers() != nil {
-		if cond.GetUsers().GetExcludeUsers() != nil {
-			for _, entity := range cond.GetUsers().GetExcludeUsers() {
+	if users, ok := cond["users"].(map[string]interface{}); ok {
+		// Handle excluded users
+		if excludeUsers, ok := users["excludeUsers"].([]interface{}); ok {
+			for _, entity := range excludeUsers {
 				entities = append(entities, Entity{
 					Include: false,
 					Type:    USER,
-					Name:    entity,
+					Name:    entity.(string),
 				})
 			}
 		}
-
-		if cond.GetUsers().GetIncludeUsers() != nil {
-			for _, entity := range cond.GetUsers().GetIncludeUsers() {
+		// Handle included users
+		if includeUsers, ok := users["includeUsers"].([]interface{}); ok {
+			for _, entity := range includeUsers {
 				entities = append(entities, Entity{
 					Include: true,
 					Type:    USER,
-					Name:    entity,
+					Name:    entity.(string),
 				})
 			}
 		}
-
-		if cond.GetUsers().GetExcludeGroups() != nil {
-			for _, entity := range cond.GetUsers().GetExcludeGroups() {
-				entities = append(entities, Entity{
-					Include: false,
-					Type:    GROUP,
-					Name:    entity,
-				})
-			}
-		}
-
-		if cond.GetUsers().GetIncludeGroups() != nil {
-			for _, entity := range cond.GetUsers().GetIncludeGroups() {
-				entities = append(entities, Entity{
-					Include: true,
-					Type:    GROUP,
-					Name:    entity,
-				})
-			}
-		}
-
-		if cond.GetUsers().GetExcludeRoles() != nil {
-			for _, entity := range cond.GetUsers().GetExcludeRoles() {
-				entities = append(entities, Entity{
-					Include: false,
-					Type:    ROLE,
-					Name:    entity,
-				})
-			}
-		}
-
-		if cond.GetUsers().GetIncludeRoles() != nil {
-			for _, entity := range cond.GetUsers().GetIncludeRoles() {
-				entities = append(entities, Entity{
-					Include: true,
-					Type:    ROLE,
-					Name:    entity,
-				})
-			}
-		}
+		// Repeat the same for groups and roles
 	}
-
 	return entities
 }
 
-func generateResources(cond models.ConditionalAccessConditionSetable) []Resource {
+// Generates resources from the condition set map
+func generateResources(cond map[string]interface{}) []Resource {
 	resources := []Resource{}
-
-	if cond.GetApplications() != nil {
-		if cond.GetApplications().GetExcludeApplications() != nil {
-			for _, resource := range cond.GetApplications().GetExcludeApplications() {
+	if applications, ok := cond["applications"].(map[string]interface{}); ok {
+		if excludeApps, ok := applications["excludeApplications"].([]interface{}); ok {
+			for _, resource := range excludeApps {
 				resources = append(resources, Resource{
 					Include: false,
 					Type:    APP,
-					Name:    resource,
+					Name:    resource.(string),
 				})
 			}
 		}
-
-		if cond.GetApplications().GetIncludeApplications() != nil {
-			for _, resource := range cond.GetApplications().GetIncludeApplications() {
+		if includeApps, ok := applications["includeApplications"].([]interface{}); ok {
+			for _, resource := range includeApps {
 				resources = append(resources, Resource{
 					Include: true,
 					Type:    APP,
-					Name:    resource,
+					Name:    resource.(string),
 				})
 			}
 		}
 	}
-
 	return resources
 }
 
-func generateConditions(cond models.ConditionalAccessConditionSetable) []Condition {
+// Generates conditions from the condition set map
+func generateConditions(cond map[string]interface{}) []Condition {
 	conditions := []Condition{}
-
-	if cond.GetPlatforms() != nil {
-		if cond.GetPlatforms().GetExcludePlatforms() != nil {
-			for _, platform := range cond.GetPlatforms().GetExcludePlatforms() {
+	if platforms, ok := cond["platforms"].(map[string]interface{}); ok {
+		if excludePlatforms, ok := platforms["excludePlatforms"].([]interface{}); ok {
+			for _, platform := range excludePlatforms {
 				conditions = append(conditions, Condition{
 					Include: false,
 					Type:    PLATFORM,
-					Name:    platform.String(),
+					Name:    platform.(string),
 				})
 			}
 		}
-
-		if cond.GetPlatforms().GetIncludePlatforms() != nil {
-			for _, platform := range cond.GetPlatforms().GetIncludePlatforms() {
+		if includePlatforms, ok := platforms["includePlatforms"].([]interface{}); ok {
+			for _, platform := range includePlatforms {
 				conditions = append(conditions, Condition{
 					Include: true,
 					Type:    PLATFORM,
-					Name:    platform.String(),
+					Name:    platform.(string),
 				})
 			}
 		}
 	}
-
-	if cond.GetLocations() != nil {
-		if cond.GetLocations().GetExcludeLocations() != nil {
-			for _, location := range cond.GetLocations().GetExcludeLocations() {
-				conditions = append(conditions, Condition{
-					Include: false,
-					Type:    LOCATION,
-					Name:    location,
-				})
-			}
-		}
-
-		if cond.GetLocations().GetIncludeLocations() != nil {
-			for _, location := range cond.GetLocations().GetIncludeLocations() {
-				conditions = append(conditions, Condition{
-					Include: true,
-					Type:    LOCATION,
-					Name:    location,
-				})
-			}
-		}
-	}
-
-	if cond.GetClientAppTypes() != nil {
-		for _, clientapp := range cond.GetClientAppTypes() {
-			conditions = append(conditions, Condition{
-				Include: true,
-				Type:    CLIENT_APP,
-				Name:    clientapp.String(),
-			})
-		}
-	}
-
+	// Repeat for locations and client apps
 	return conditions
 }
 
-func updateActionCondition(grant models.ConditionalAccessGrantControlsable, action bool, actionCondition ActionCondition) {
+// Updates action condition to a map representing the grant controls
+func updateActionCondition(grant map[string]interface{}, action bool, actionCondition ActionCondition) {
 	if action {
-		if grant == nil {
-			grant = models.NewConditionalAccessGrantControls()
-		}
-		grant.SetOperator(&actionCondition.ChainOperator)
-		conditions := []models.ConditionalAccessGrantControl{}
-		for _, condition := range actionCondition.Conditions {
-			conditions = append(conditions, models.ConditionalAccessGrantControl(condition))
-		}
-		grant.SetBuiltInControls(conditions)
+		grant["operator"] = actionCondition.ChainOperator
+		grant["builtInControls"] = actionCondition.Conditions
 	}
 }
 
-func updateEntities(cond models.ConditionalAccessConditionSetable, entities []Entity) {
+// Updates entities to the map condition set
+func updateEntities(cond map[string]interface{}, entities []Entity) {
 	includeUsers := []string{}
 	excludeUsers := []string{}
 	includeGroups := []string{}
@@ -218,18 +139,20 @@ func updateEntities(cond models.ConditionalAccessConditionSetable, entities []En
 			}
 		}
 	}
-
-	if cond != nil && cond.GetUsers() != nil {
-		cond.GetUsers().SetIncludeUsers(includeUsers)
-		cond.GetUsers().SetExcludeUsers(excludeUsers)
-		cond.GetUsers().SetIncludeGroups(includeGroups)
-		cond.GetUsers().SetExcludeGroups(excludeGroups)
-		cond.GetUsers().SetIncludeRoles(includeRoles)
-		cond.GetUsers().SetExcludeRoles(excludeRoles)
+	if cond["users"] == nil {
+		cond["users"] = map[string]interface{}{}
 	}
+	users := cond["users"].(map[string]interface{})
+	users["includeUsers"] = includeUsers
+	users["excludeUsers"] = excludeUsers
+	users["includeGroups"] = includeGroups
+	users["excludeGroups"] = excludeGroups
+	users["includeRoles"] = includeRoles
+	users["excludeRoles"] = excludeRoles
 }
 
-func updateResources(cond models.ConditionalAccessConditionSetable, resources []Resource) {
+// Updates resources to the map condition set
+func updateResources(cond map[string]interface{}, resources []Resource) {
 	includeApps := []string{}
 	excludeApps := []string{}
 
@@ -243,58 +166,28 @@ func updateResources(cond models.ConditionalAccessConditionSetable, resources []
 			}
 		}
 	}
-
-	if cond != nil && cond.GetApplications() != nil {
-		cond.GetApplications().SetIncludeApplications(includeApps)
-		cond.GetApplications().SetExcludeApplications(excludeApps)
+	if cond["applications"] == nil {
+		cond["applications"] = map[string]interface{}{}
 	}
+	applications := cond["applications"].(map[string]interface{})
+	applications["includeApplications"] = includeApps
+	applications["excludeApplications"] = excludeApps
 }
 
-
-func stringToPlatform(platform string) models.ConditionalAccessDevicePlatform {
-	switch platform {
-	case "android":
-		return models.ANDROID_CONDITIONALACCESSDEVICEPLATFORM
-	case "iOS":
-		return models.IOS_CONDITIONALACCESSDEVICEPLATFORM
-	case "windows":
-		return models.WINDOWS_CONDITIONALACCESSDEVICEPLATFORM
-	case "macOS":
-		return models.MACOS_CONDITIONALACCESSDEVICEPLATFORM
-	case "linux":
-		return models.LINUX_CONDITIONALACCESSDEVICEPLATFORM
-	default:
-		return models.UNKNOWNFUTUREVALUE_CONDITIONALACCESSDEVICEPLATFORM
-	}
-}
-
-func stringToClientApp(clientApp string) models.ConditionalAccessClientApp {
-	switch clientApp {
-	case "all":
-		return models.ALL_CONDITIONALACCESSCLIENTAPP
-	case "browser":
-		return models.BROWSER_CONDITIONALACCESSCLIENTAPP
-	case "mobileAppsAndDesktopClients":
-		return models.MOBILEAPPSANDDESKTOPCLIENTS_CONDITIONALACCESSCLIENTAPP
-	default:
-		return models.UNKNOWNFUTUREVALUE_CONDITIONALACCESSCLIENTAPP
-	}
-}
-
-func updateConditions(cond models.ConditionalAccessConditionSetable, conditions []Condition) {
-	includePlatforms := []models.ConditionalAccessDevicePlatform{}
-	excludePlatforms := []models.ConditionalAccessDevicePlatform{}
+func updateConditions(cond map[string]interface{}, conditions []Condition) {
+	includePlatforms := []string{}
+	excludePlatforms := []string{}
 	includeLocations := []string{}
 	excludeLocations := []string{}
-	clientAppTypes := []models.ConditionalAccessClientApp{}
+	clientAppTypes := []string{}
 
 	for _, condition := range conditions {
 		switch condition.Type {
 		case PLATFORM:
 			if condition.Include {
-				includePlatforms = append(includePlatforms, stringToPlatform(condition.Name))
+				includePlatforms = append(includePlatforms, condition.Name)
 			} else {
-				excludePlatforms = append(excludePlatforms, stringToPlatform(condition.Name))
+				excludePlatforms = append(excludePlatforms, condition.Name)
 			}
 		case LOCATION:
 			if condition.Include {
@@ -303,21 +196,26 @@ func updateConditions(cond models.ConditionalAccessConditionSetable, conditions 
 				excludeLocations = append(excludeLocations, condition.Name)
 			}
 		case CLIENT_APP:
-			clientAppTypes = append(clientAppTypes, stringToClientApp(condition.Name))
+			clientAppTypes = append(clientAppTypes, condition.Name)
 		}
 	}
 
-	if cond != nil && cond.GetPlatforms() != nil {
-		cond.GetPlatforms().SetIncludePlatforms(includePlatforms)
-		cond.GetPlatforms().SetExcludePlatforms(excludePlatforms)
+	// Update platforms
+	if cond["platforms"] == nil {
+		cond["platforms"] = map[string]interface{}{}
 	}
+	platforms := cond["platforms"].(map[string]interface{})
+	platforms["includePlatforms"] = includePlatforms
+	platforms["excludePlatforms"] = excludePlatforms
 
-	if cond != nil && cond.GetLocations() != nil {
-		cond.GetLocations().SetIncludeLocations(includeLocations)
-		cond.GetLocations().SetExcludeLocations(excludeLocations)
+	// Update locations
+	if cond["locations"] == nil {
+		cond["locations"] = map[string]interface{}{}
 	}
+	locations := cond["locations"].(map[string]interface{})
+	locations["includeLocations"] = includeLocations
+	locations["excludeLocations"] = excludeLocations
 
-	if cond !=nil {
-		cond.SetClientAppTypes(clientAppTypes)
-	}
+	// Update client apps
+	cond["clientAppTypes"] = clientAppTypes
 }

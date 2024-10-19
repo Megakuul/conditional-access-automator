@@ -1,12 +1,13 @@
 package adapter
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
-	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
-	"github.com/microsoftgraph/msgraph-sdk-go/models"
 )
 
 type AzureAdapter struct {}
@@ -15,47 +16,8 @@ func NewAzureAdapter() *AzureAdapter {
 	return &AzureAdapter{}
 }
 
-func (a *AzureAdapter) FetchPolicies(accessToken string) (models.ConditionalAccessPolicyCollectionResponseable, error) {
+func (a *AzureAdapter) FetchPolicies(accessToken string) ([]map[string]interface{}, error) {
 
-		token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
-	if err != nil {
-		return nil, err
-	}
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, fmt.Errorf("failed to cast token claims")
-	}
-	expiration, err := claims.GetExpirationTime()
-	if err!=nil {
-		return nil, err
-	}
-	userSub, err := claims.GetSubject()
-	if err!=nil {
-		return nil, err
-	}
-	
-	graphClient, err := msgraph.NewGraphServiceClientWithCredentials(
-		NewTokenInjector(accessToken, expiration.Unix()), []string{"Policy.Read.All"},
-	)
-	if err!=nil {
-		return nil, err
-	}
-
-	policies, err := graphClient.Identity().ConditionalAccess().Policies().Get(context.Background(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("INFO: user %s fetched policies\n", userSub)
-
-	return policies, nil
-}
-
-
-func (a *AzureAdapter) UpdatePolicy(
-	accessToken string,
-	tmpl models.ConditionalAccessPolicyable) (models.ConditionalAccessPolicyable, error) {
-	
 	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
 	if err != nil {
 		return nil, err
@@ -64,58 +26,91 @@ func (a *AzureAdapter) UpdatePolicy(
 	if !ok {
 		return nil, fmt.Errorf("failed to cast token claims")
 	}
-	expiration, err := claims.GetExpirationTime()
+	userSub, err := claims.GetSubject()
 	if err!=nil {
 		return nil, err
+	}
+
+	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err!=nil {
+		return nil, err
+	}
+
+	fmt.Printf("INFO: user %s fetched policies\n", userSub)
+
+	bodyMap := map[string]interface{}{}
+	err = json.Unmarshal(body, &bodyMap)
+	if err!=nil {
+		return nil, err
+	}
+	return bodyMap["value"].([]map[string]interface{}), nil
+}
+
+
+func (a *AzureAdapter) UpdatePolicy(accessToken string, tmplId string, tmpl []byte) (map[string]interface{}, error) {
+
+	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast token claims")
 	}
 	userSub, err := claims.GetSubject()
 	if err!=nil {
 		return nil, err
 	}
-	
-	graphClient, err := msgraph.NewGraphServiceClientWithCredentials(
-		NewTokenInjector(accessToken, expiration.Unix()), []string{"Policy.Read.All", "Policy.ReadWrite.ConditionalAccess"},
-	)
+
+	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(tmpl))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
 	if err!=nil {
 		return nil, err
 	}
 
-	tmplId := ""
-	if tmpl.GetId() != nil {
-		tmplId = *tmpl.GetId()
-	}
+	fmt.Printf("INFO: user %s updated policy %s\n", userSub, tmplId)
 
-	policy, err := graphClient.Identity().ConditionalAccess().Policies().ByConditionalAccessPolicyId(tmplId).Get(
-		context.Background(), nil,
-	)
+	bodyMap := map[string]interface{}{}
+	err = json.Unmarshal(body, &bodyMap)
 	if err!=nil {
-		policy, err = graphClient.Identity().ConditionalAccess().Policies().Post(
-			context.Background(), tmpl, nil,
-		)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		policy, err = graphClient.Identity().ConditionalAccess().Policies().ByConditionalAccessPolicyId(tmplId).Patch(
-			context.Background(), tmpl, nil,
-		)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
-
-	if policy.GetDisplayName() != nil {
-		fmt.Printf("INFO: user %s updated policy %s\n", userSub, *policy.GetDisplayName())
-	} else if policy.GetId() != nil {
-		fmt.Printf("INFO: user %s updated policy %s\n", userSub, *policy.GetId())
-	}
-
-	return policy, nil
+	return bodyMap, nil
 }
 
 
-func (a *AzureAdapter) DeletePolicy(accessToken string, policyId string) error {
-	
+func (a *AzureAdapter) DeletePolicy(accessToken string, tmplId string) error {	
 	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
 	if err != nil {
 		return err
@@ -124,30 +119,33 @@ func (a *AzureAdapter) DeletePolicy(accessToken string, policyId string) error {
 	if !ok {
 		return fmt.Errorf("failed to cast token claims")
 	}
-	expiration, err := claims.GetExpirationTime()
-	if err!=nil {
-		return err
-	}
 	userSub, err := claims.GetSubject()
 	if err!=nil {
 		return err
 	}
 	
-	graphClient, err := msgraph.NewGraphServiceClientWithCredentials(
-		NewTokenInjector(accessToken, expiration.Unix()), []string{"Policy.Write.All"},
-	)
+	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/" + tmplId
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return  err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, err = io.ReadAll(resp.Body)
 	if err!=nil {
 		return err
 	}
 
-	err = graphClient.Identity().ConditionalAccess().Policies().ByConditionalAccessPolicyId(policyId).Delete(
-		context.Background(), nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("INFO: user %s deleted policy %s\n", userSub, policyId)
+	fmt.Printf("INFO: user %s deleted policy %s\n", userSub, tmplId)
 
 	return nil
 }
