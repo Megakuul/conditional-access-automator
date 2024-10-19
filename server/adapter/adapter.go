@@ -82,6 +82,7 @@ func (a *AzureAdapter) FetchPolicies(accessToken string) ([]map[string]interface
 
 
 func (a *AzureAdapter) UpdatePolicy(accessToken string, tmplId string, tmpl []byte) (map[string]interface{}, error) {
+	
 
 	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
 	if err != nil {

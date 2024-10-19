@@ -25,6 +25,7 @@ func NewApi(addr, emergencyAccount string) *Api {
 	serveMux.HandleFunc("/list", serveHandler.list)
 	serveMux.HandleFunc("/format", serveHandler.format)
 	serveMux.HandleFunc("/apply", serveHandler.apply)
+	serveMux.HandleFunc("/destroy", serveHandler.destroy)
 	
 	return &Api{
 		server: &http.Server{

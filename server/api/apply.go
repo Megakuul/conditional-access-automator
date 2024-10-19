@@ -37,7 +37,7 @@ func (h* ApiHandler) apply(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("failed to read request body"))
 		return
 	}
-	req := formatRequest{}
+	req := applyRequest{}
 	err = json.Unmarshal(reqRaw, &req)
 	if err!=nil {
 		w.WriteHeader(http.StatusBadRequest)

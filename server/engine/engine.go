@@ -105,30 +105,53 @@ func ParseAzureTemplate(bodyMap map[string]interface{}) (*Template, error) {
 	}, nil
 }
 
-// SerializeAzureTemplate serializes the Template into a byte slice for Azure policy
 func SerializeAzureTemplate(body *Template, emergencyAccount string) (string, []byte, error) {
 	excludeEmergencyAccount(body, emergencyAccount)
 
 	azureTmpl := make(map[string]interface{})
-	azureTmpl["id"] = body.Id
-	azureTmpl["displayName"] = body.Name
-	azureTmpl["description"] = body.Description
-	azureTmpl["state"] = body.State
+
+	// Only add non-empty fields
+	if body.Id != "" {
+		azureTmpl["id"] = body.Id
+	}
+	if body.Name != "" {
+		azureTmpl["displayName"] = body.Name
+	}
+	if body.Description != "" {
+		azureTmpl["description"] = body.Description
+	}
+	if body.State != "" {
+		azureTmpl["state"] = body.State
+	}
 
 	grant := make(map[string]interface{})
-	updateActionCondition(grant, body.Policy.Action, body.Policy.ActionCondition)
-	azureTmpl["grantControls"] = grant
+	if body.Policy.Action {
+		updateActionCondition(grant, body.Policy.Action, body.Policy.ActionCondition)
+		if len(grant) > 0 {
+			azureTmpl["grantControls"] = grant
+		}
+	}
 
 	conditions := make(map[string]interface{})
-	updateEntities(conditions, body.Policy.Entities)
-	updateResources(conditions, body.Policy.Resources)
-	updateConditions(conditions, body.Policy.Conditions)
-	azureTmpl["conditions"] = conditions
+	if len(body.Policy.Entities) > 0 {
+		updateEntities(conditions, body.Policy.Entities)
+	}
+	if len(body.Policy.Resources) > 0 {
+		updateResources(conditions, body.Policy.Resources)
+	}
+	if len(body.Policy.Conditions) > 0 {
+		updateConditions(conditions, body.Policy.Conditions)
+	}
+	
+	if len(conditions) > 0 {
+		azureTmpl["conditions"] = conditions
+	}
 
+	// Marshal the resulting map into JSON
 	outTmpl, err := json.Marshal(azureTmpl)
-	if err!=nil {
+	if err != nil {
 		return "", nil, err
 	}
-	fmt.Println(string(outTmpl))
+
 	return body.Id, outTmpl, nil
 }

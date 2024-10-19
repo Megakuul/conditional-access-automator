@@ -193,7 +193,9 @@ func generateConditions(cond interface{}) []Condition {
 func updateActionCondition(grant map[string]interface{}, action bool, actionCondition ActionCondition) {
 	if action {
 		grant["operator"] = actionCondition.ChainOperator
-		grant["builtInControls"] = actionCondition.Conditions
+		if len(actionCondition.Conditions) > 0 {
+			grant["builtInControls"] = actionCondition.Conditions
+		}
 	} else {
 		grant["operator"] = "OR"
 		grant["builtInControls"] = []string{"block"}
@@ -231,16 +233,30 @@ func updateEntities(cond map[string]interface{}, entities []Entity) {
 			}
 		}
 	}
-	if cond["users"] == nil {
-		cond["users"] = map[string]interface{}{}
+		if len(includeUsers) > 0 || len(excludeUsers) > 0 || len(includeGroups) > 0 || len(excludeGroups) > 0 || len(includeRoles) > 0 || len(excludeRoles) > 0 {
+		if cond["users"] == nil {
+			cond["users"] = map[string]interface{}{}
+		}
+		users := cond["users"].(map[string]interface{})
+		if len(includeUsers) > 0 {
+			users["includeUsers"] = includeUsers
+		}
+		if len(excludeUsers) > 0 {
+			users["excludeUsers"] = excludeUsers
+		}
+		if len(includeGroups) > 0 {
+			users["includeGroups"] = includeGroups
+		}
+		if len(excludeGroups) > 0 {
+			users["excludeGroups"] = excludeGroups
+		}
+		if len(includeRoles) > 0 {
+			users["includeRoles"] = includeRoles
+		}
+		if len(excludeRoles) > 0 {
+			users["excludeRoles"] = excludeRoles
+		}
 	}
-	users := cond["users"].(map[string]interface{})
-	users["includeUsers"] = includeUsers
-	users["excludeUsers"] = excludeUsers
-	users["includeGroups"] = includeGroups
-	users["excludeGroups"] = excludeGroups
-	users["includeRoles"] = includeRoles
-	users["excludeRoles"] = excludeRoles
 }
 
 // Updates resources to the map condition set
@@ -258,12 +274,19 @@ func updateResources(cond map[string]interface{}, resources []Resource) {
 			}
 		}
 	}
-	if cond["applications"] == nil {
-		cond["applications"] = map[string]interface{}{}
+
+	if len(includeApps) > 0 || len(excludeApps) > 0 {
+		if cond["applications"] == nil {
+			cond["applications"] = map[string]interface{}{}
+		}
+		applications := cond["applications"].(map[string]interface{})
+		if len(includeApps) > 0 {
+			applications["includeApplications"] = includeApps
+		}
+		if len(excludeApps) > 0 {
+			applications["excludeApplications"] = excludeApps
+		}
 	}
-	applications := cond["applications"].(map[string]interface{})
-	applications["includeApplications"] = includeApps
-	applications["excludeApplications"] = excludeApps
 }
 
 func updateConditions(cond map[string]interface{}, conditions []Condition) {
@@ -292,22 +315,35 @@ func updateConditions(cond map[string]interface{}, conditions []Condition) {
 		}
 	}
 
-	// Update platforms
-	if cond["platforms"] == nil {
-		cond["platforms"] = map[string]interface{}{}
+	if len(includePlatforms) > 0 || len(excludePlatforms) > 0 {
+		if cond["platforms"] == nil {
+			cond["platforms"] = map[string]interface{}{}
+		}
+		platforms := cond["platforms"].(map[string]interface{})
+		if len(includePlatforms) > 0 {
+			platforms["includePlatforms"] = includePlatforms
+		}
+		if len(excludePlatforms) > 0 {
+			platforms["excludePlatforms"] = excludePlatforms
+		}
 	}
-	platforms := cond["platforms"].(map[string]interface{})
-	platforms["includePlatforms"] = includePlatforms
-	platforms["excludePlatforms"] = excludePlatforms
 
 	// Update locations
-	if cond["locations"] == nil {
-		cond["locations"] = map[string]interface{}{}
+	if len(includeLocations) > 0 || len(excludeLocations) > 0 {
+		if cond["locations"] == nil {
+			cond["locations"] = map[string]interface{}{}
+		}
+		locations := cond["locations"].(map[string]interface{})
+		if len(includeLocations) > 0 {
+			locations["includeLocations"] = includeLocations
+		}
+		if len(excludeLocations) > 0 {
+			locations["excludeLocations"] = excludeLocations
+		}
 	}
-	locations := cond["locations"].(map[string]interface{})
-	locations["includeLocations"] = includeLocations
-	locations["excludeLocations"] = excludeLocations
 
 	// Update client apps
-	cond["clientAppTypes"] = clientAppTypes
+	if len(clientAppTypes) > 0 {
+		cond["clientAppTypes"] = clientAppTypes
+	}
 }
