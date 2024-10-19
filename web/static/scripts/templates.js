@@ -1032,6 +1032,3 @@ function addEventListeners() {
     toggleBlur(true);
   });
 }
-
-// Initial call to refresh the grid
-refreshGrid();
