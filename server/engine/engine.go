@@ -16,6 +16,9 @@ func safeString(s interface{}) string {
 	if ok {
 		return str
 	}
+	if strPtr, ok := s.(*string); ok && strPtr != nil {
+		return *strPtr
+	}
 	return ""
 }
 

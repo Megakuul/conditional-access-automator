@@ -200,7 +200,7 @@ func generateConditions(cond *beta.ConditionalAccessConditionSet) []Condition {
 }
 
 func updateActionCondition(grant *beta.ConditionalAccessGrantControls, action bool, actionCondition ActionCondition) {
-	if action {
+	if grant != nil && action {
 		grant.Operator = nullable.Value(actionCondition.ChainOperator)
 		conditions := []beta.ConditionalAccessGrantControl{}
 		for _, condition := range actionCondition.Conditions {
@@ -260,7 +260,7 @@ func updateEntities(cond *beta.ConditionalAccessConditionSet, entities []Entity)
 		}
 	}
 
-	if cond.Users != nil {
+	if cond != nil && cond.Users != nil {
 		cond.Users.IncludeUsers = &includeUsers
 		cond.Users.ExcludeUsers = &excludeUsers
 		cond.Users.IncludeGroups = &includeGroups
@@ -285,8 +285,10 @@ func updateResources(cond *beta.ConditionalAccessConditionSet, resources []Resou
 		}
 	}
 
-	cond.Applications.IncludeApplications = &includeApps
-	cond.Applications.ExcludeApplications = &excludeApps
+	if cond != nil {
+		cond.Applications.IncludeApplications = &includeApps
+		cond.Applications.ExcludeApplications = &excludeApps
+	}
 }
 
 func updateConditions(cond *beta.ConditionalAccessConditionSet, conditions []Condition) {
@@ -315,17 +317,19 @@ func updateConditions(cond *beta.ConditionalAccessConditionSet, conditions []Con
 		}
 	}
 
-	if cond.Platforms != nil {
-		cond.Platforms.IncludePlatforms = &includePlatforms
-		cond.Platforms.ExcludePlatforms = &excludePlatforms
-	}
+	if cond != nil {
+		if cond.Platforms != nil {
+			cond.Platforms.IncludePlatforms = &includePlatforms
+			cond.Platforms.ExcludePlatforms = &excludePlatforms
+		}
 
-	if cond.Locations != nil {
-		cond.Locations.IncludeLocations = &includeLocations
-		cond.Locations.ExcludeLocations = &excludeLocations
-	}
+		if cond.Locations != nil {
+			cond.Locations.IncludeLocations = &includeLocations
+			cond.Locations.ExcludeLocations = &excludeLocations
+		}
 
-	cond.ClientAppTypes = clientAppTypes
+		cond.ClientAppTypes = clientAppTypes
+	}
 }
 
 func stringToPlatform(platform string) beta.ConditionalAccessDevicePlatform {

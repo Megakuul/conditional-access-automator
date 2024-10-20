@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/go-azure-sdk/microsoft-graph/common-types/beta"
@@ -41,7 +42,9 @@ func (a *AzureAdapter) FetchPolicies(accessToken string) (*[]beta.ConditionalAcc
 	}
 	client.Client.SetAuthorizer(NewTokenInjector(accessToken, int(accessTokenExp.Unix())))
 
-	resp, err := client.ListConditionalAccessPolicies(context.TODO(), conditionalaccesspolicy.DefaultListConditionalAccessPoliciesOperationOptions())
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
+	defer cancel()
+	resp, err := client.ListConditionalAccessPolicies(ctx, conditionalaccesspolicy.DefaultListConditionalAccessPoliciesOperationOptions())
 	if err != nil {
 		return nil, err
 	}
@@ -75,12 +78,14 @@ func (a *AzureAdapter) UpdatePolicy(accessToken string, tmplId string, tmpl beta
 	}
 	client.Client.SetAuthorizer(NewTokenInjector(accessToken, int(accessTokenExp.Unix())))
 
-	_, err = client.CreateConditionalAccessPolicy(context.TODO(),
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
+	defer cancel()
+	_, err = client.CreateConditionalAccessPolicy(ctx,
 		tmpl,
 		conditionalaccesspolicy.DefaultCreateConditionalAccessPolicyOperationOptions(),
 	)
 	if err != nil {
-		_, err = client.UpdateConditionalAccessPolicy(context.TODO(),
+		_, err = client.UpdateConditionalAccessPolicy(ctx,
 			beta.NewPolicyConditionalAccessPolicyID(tmplId),
 			tmpl,
 			conditionalaccesspolicy.DefaultUpdateConditionalAccessPolicyOperationOptions(),
@@ -119,7 +124,9 @@ func (a *AzureAdapter) DeletePolicy(accessToken string, tmplId string) error {
 	}
 	client.Client.SetAuthorizer(NewTokenInjector(accessToken, int(accessTokenExp.Unix())))
 
-	_, err = client.DeleteConditionalAccessPolicy(context.TODO(),
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
+	defer cancel()
+	_, err = client.DeleteConditionalAccessPolicy(ctx,
 		beta.NewPolicyConditionalAccessPolicyID(tmplId),
 		conditionalaccesspolicy.DefaultDeleteConditionalAccessPolicyOperationOptions(),
 	)
