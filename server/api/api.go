@@ -12,24 +12,24 @@ type Api struct {
 
 type ApiHandler struct {
 	emergencyAccount string
-	adapter *adapter.AzureAdapter
+	adapter          *adapter.AzureAdapter
 }
 
 func NewApi(addr, emergencyAccount string) *Api {
 	serveHandler := ApiHandler{
 		emergencyAccount: emergencyAccount,
-		adapter: &adapter.AzureAdapter{},
+		adapter:          &adapter.AzureAdapter{},
 	}
-	
+
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/list", serveHandler.list)
 	serveMux.HandleFunc("/format", serveHandler.format)
 	serveMux.HandleFunc("/apply", serveHandler.apply)
 	serveMux.HandleFunc("/destroy", serveHandler.destroy)
-	
+
 	return &Api{
 		server: &http.Server{
-			Addr: addr,
+			Addr:    addr,
 			Handler: serveMux,
 		},
 	}

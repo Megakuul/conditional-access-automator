@@ -1,22 +1,22 @@
 package adapter
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/hashicorp/go-azure-sdk/microsoft-graph/common-types/beta"
+	"github.com/hashicorp/go-azure-sdk/microsoft-graph/policies/beta/conditionalaccesspolicy"
+	"github.com/hashicorp/go-azure-sdk/sdk/environments"
 )
 
-type AzureAdapter struct {}
+type AzureAdapter struct{}
 
 func NewAzureAdapter() *AzureAdapter {
 	return &AzureAdapter{}
 }
 
-func (a *AzureAdapter) FetchPolicies(accessToken string) ([]map[string]interface{}, error) {
+func (a *AzureAdapter) FetchPolicies(accessToken string) (*[]beta.ConditionalAccessPolicy, error) {
 
 	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
 	if err != nil {
@@ -27,153 +27,31 @@ func (a *AzureAdapter) FetchPolicies(accessToken string) ([]map[string]interface
 		return nil, fmt.Errorf("failed to cast token claims")
 	}
 	userSub, err := claims.GetSubject()
-	if err!=nil {
+	if err != nil {
 		return nil, err
 	}
-
-	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies"
-	req, err := http.NewRequest("GET", url, nil)
+	accessTokenExp, err := claims.GetExpirationTime()
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	client, err := conditionalaccesspolicy.NewConditionalAccessPolicyClientWithBaseURI(environments.AzurePublic().MicrosoftGraph)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	client.Client.SetAuthorizer(NewTokenInjector(accessToken, int(accessTokenExp.Unix())))
 
-	body, err := io.ReadAll(resp.Body)
-	if err!=nil {
+	resp, err := client.ListConditionalAccessPolicies(context.TODO(), conditionalaccesspolicy.DefaultListConditionalAccessPoliciesOperationOptions())
+	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode > 399 {
-		return nil, fmt.Errorf(string(body))
-	}
+	fmt.Printf("INFO: user %s fetched all policies", userSub)
 
-	fmt.Printf("INFO: user %s fetched policies\n", userSub)
-
-	bodyMap := map[string]interface{}{}
-	err = json.Unmarshal(body, &bodyMap)
-	if err!=nil {
-		return nil, err
-	}
-	bodyValues, ok := bodyMap["value"].([]interface{})
-	if !ok {
-    return nil, fmt.Errorf(string(body))
-	}
-
-	var bodyMaps []map[string]interface{}
-	for _, value := range bodyValues {
-    if item, ok := value.(map[string]interface{}); ok {
-			bodyMaps = append(bodyMaps, item)
-    } else {
-			return nil, fmt.Errorf("unexpected type in value slice")
-    }
-	}
-
-	return bodyMaps, nil
+	return resp.Model, nil
 }
 
-
-func (a *AzureAdapter) UpdatePolicy(accessToken string, tmplId string, tmpl []byte) (map[string]interface{}, error) {
-	
-
-	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
-	if err != nil {
-		return nil, err
-	}
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, fmt.Errorf("failed to cast token claims")
-	}
-	userSub, err := claims.GetSubject()
-	if err!=nil {
-		return nil, err
-	}
-	
-	body, err := createPolicy(accessToken, tmpl)
-	if err!=nil {
-		body, err = updatePolicy(accessToken, tmplId, tmpl)
-		if err!=nil {
-			return nil, err
-		}
-	}
-
-	fmt.Printf("INFO: user %s updated policy %s\n", userSub, tmplId)
-
-	bodyMap := map[string]interface{}{}
-	err = json.Unmarshal(body, &bodyMap)
-	if err!=nil {
-		return nil, err
-	}
-	return bodyMap, nil
-}
-
-func createPolicy(accessToken string, tmpl []byte) ([]byte, error) {
-	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(tmpl))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err!=nil {
-		return nil, err
-	}
-
-	if resp.StatusCode > 399 {
-		return nil, fmt.Errorf(string(body))
-	}
-
-	return body, nil
-}
-
-func updatePolicy(accessToken string, tmplId string, tmpl []byte) ([]byte, error) {
-	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/" + tmplId
-	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(tmpl))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err!=nil {
-		return nil, err
-	}
-
-	if resp.StatusCode > 399 {
-		return nil, fmt.Errorf(string(body))
-	}
-
-	return body, nil
-}
-
-func (a *AzureAdapter) DeletePolicy(accessToken string, tmplId string) error {	
+func (a *AzureAdapter) UpdatePolicy(accessToken string, tmplId string, tmpl beta.ConditionalAccessPolicy) error {
 	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
 	if err != nil {
 		return err
@@ -183,34 +61,68 @@ func (a *AzureAdapter) DeletePolicy(accessToken string, tmplId string) error {
 		return fmt.Errorf("failed to cast token claims")
 	}
 	userSub, err := claims.GetSubject()
-	if err!=nil {
-		return err
-	}
-	
-	url := "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/" + tmplId
-	req, err := http.NewRequest("DELETE", url, nil)
-	if err != nil {
-		return  err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err!=nil {
+	accessTokenExp, err := claims.GetExpirationTime()
+	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode > 399 {
-		return fmt.Errorf(string(body))
+	client, err := conditionalaccesspolicy.NewConditionalAccessPolicyClientWithBaseURI(environments.AzurePublic().MicrosoftGraph)
+	if err != nil {
+		return err
 	}
+	client.Client.SetAuthorizer(NewTokenInjector(accessToken, int(accessTokenExp.Unix())))
+
+	_, err = client.CreateConditionalAccessPolicy(context.TODO(),
+		tmpl,
+		conditionalaccesspolicy.DefaultCreateConditionalAccessPolicyOperationOptions(),
+	)
+	if err != nil {
+		_, err = client.UpdateConditionalAccessPolicy(context.TODO(),
+			beta.NewPolicyConditionalAccessPolicyID(tmplId),
+			tmpl,
+			conditionalaccesspolicy.DefaultUpdateConditionalAccessPolicyOperationOptions(),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	fmt.Printf("INFO: user %s updated policy %s\n", userSub, tmplId)
+
+	return nil
+}
+
+func (a *AzureAdapter) DeletePolicy(accessToken string, tmplId string) error {
+	token, _, err := new(jwt.Parser).ParseUnverified(accessToken, jwt.MapClaims{})
+	if err != nil {
+		return err
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return fmt.Errorf("failed to cast token claims")
+	}
+	userSub, err := claims.GetSubject()
+	if err != nil {
+		return err
+	}
+	accessTokenExp, err := claims.GetExpirationTime()
+	if err != nil {
+		return err
+	}
+
+	client, err := conditionalaccesspolicy.NewConditionalAccessPolicyClientWithBaseURI(environments.AzurePublic().MicrosoftGraph)
+	if err != nil {
+		return err
+	}
+	client.Client.SetAuthorizer(NewTokenInjector(accessToken, int(accessTokenExp.Unix())))
+
+	_, err = client.DeleteConditionalAccessPolicy(context.TODO(),
+		beta.NewPolicyConditionalAccessPolicyID(tmplId),
+		conditionalaccesspolicy.DefaultDeleteConditionalAccessPolicyOperationOptions(),
+	)
 
 	fmt.Printf("INFO: user %s deleted policy %s\n", userSub, tmplId)
 

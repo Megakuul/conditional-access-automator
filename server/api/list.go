@@ -13,30 +13,30 @@ type listResponse struct {
 	Templates []string `json:"templates"`
 }
 
-func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
+func (h *ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 	accessTokenCookie, err := r.Cookie("access_token")
-	if err!=nil {
+	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	
+
 	policies, err := h.adapter.FetchPolicies(accessTokenCookie.Value)
-	if err!=nil {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Add("Content-Type", "text/plain")
 		w.Write([]byte(fmt.Sprintf("failed to fetch policies: %v", err)))
 		return
 	}
-	
+
 	res := listResponse{}
 
-	for _, policy := range policies {
+	for _, policy := range *policies {
 		tmpl, err := engine.ParseAzureTemplate(policy)
-		if err!=nil {
+		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Header().Add("Content-Type", "text/plain")
 			w.Write([]byte(fmt.Sprintf("failed to parse policy: %v", err)))
@@ -44,7 +44,7 @@ func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 		}
 
 		jsonTmpl, err := engine.SerializeTemplate(tmpl, "json", h.emergencyAccount)
-		if err!=nil {
+		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Header().Add("Content-Type", "text/plain")
 			w.Write([]byte(fmt.Sprintf("failed to serialize policy: %v", err)))
@@ -57,7 +57,7 @@ func (h* ApiHandler) list(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resRaw, err := json.Marshal(&res)
-	if err!=nil {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Add("Content-Type", "text/plain")
 		w.Write([]byte(fmt.Sprintf("failed to serialize response: %v", err)))

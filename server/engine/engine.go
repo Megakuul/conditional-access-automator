@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/hashicorp/go-azure-sdk/microsoft-graph/common-types/beta"
+	"github.com/hashicorp/go-azure-sdk/sdk/nullable"
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,8 +42,8 @@ func excludeEmergencyAccount(body *Template, account string) {
 		}
 		body.Policy.Entities = append(body.Policy.Entities, Entity{
 			Include: false,
-			Type: USER,
-			Name: account,
+			Type:    USER,
+			Name:    account,
 		})
 	}
 }
@@ -49,7 +51,7 @@ func excludeEmergencyAccount(body *Template, account string) {
 func ParseTemplate(body []byte) (*Template, error) {
 	tmpl := &Template{}
 
-	if err:=json.Unmarshal(body, tmpl); err!=nil {
+	if err := json.Unmarshal(body, tmpl); err != nil {
 		return nil, err
 	}
 	return tmpl, nil
@@ -57,101 +59,68 @@ func ParseTemplate(body []byte) (*Template, error) {
 
 func SerializeTemplate(body *Template, format, emergencyAccount string) ([]byte, error) {
 	excludeEmergencyAccount(body, emergencyAccount)
-	
+
 	var err error
 	tmplFormat := []byte{}
 
 	switch format {
 	case "json":
 		tmplFormat, err = json.Marshal(body)
-		if err!=nil {
+		if err != nil {
 			return nil, err
 		}
 	case "yaml":
 		tmplFormat, err = yaml.Marshal(body)
-		if err!=nil {
+		if err != nil {
 			return nil, err
 		}
 	case "xml":
 		tmplFormat, err = xml.Marshal(body)
-		if err!=nil {
+		if err != nil {
 			return nil, err
 		}
 	default:
 		return nil, fmt.Errorf("unknown template format: %s", format)
 	}
-	
+
 	return tmplFormat, nil
 }
 
-// ParseAzureTemplate parses the Azure policy from byte slice map
-func ParseAzureTemplate(bodyMap map[string]interface{}) (*Template, error) {
+func ParseAzureTemplate(body beta.ConditionalAccessPolicy) (*Template, error) {
+	bodyImpl := body.ConditionalAccessPolicy()
 
-	
-	action, actionCondition := generateActionCondition(bodyMap["grantControls"])
+	action, actionCondition := generateActionCondition(bodyImpl.GrantControls)
 
 	return &Template{
-		Id:          safeString(bodyMap["id"]),
-		Name:        safeString(bodyMap["displayName"]),
-		Description: safeString(bodyMap["description"]),
-		State:       safeString(bodyMap["state"]),
+		Id:          safeString(bodyImpl.Id),
+		Name:        safeString(bodyImpl.DisplayName),
+		Description: safeString(bodyImpl.Description.Get()),
+		State:       safeString(bodyImpl.State),
 		Policy: Policy{
 			Action:          action,
 			ActionCondition: actionCondition,
-			Entities:        generateEntities(bodyMap["conditions"]),
-			Resources:       generateResources(bodyMap["conditions"]),
-			Conditions:      generateConditions(bodyMap["conditions"]),
+			Entities:        generateEntities(bodyImpl.Conditions),
+			Resources:       generateResources(bodyImpl.Conditions),
+			Conditions:      generateConditions(bodyImpl.Conditions),
 		},
 	}, nil
 }
 
-func SerializeAzureTemplate(body *Template, emergencyAccount string) (string, []byte, error) {
+func SerializeAzureTemplate(body *Template, emergencyAccount string) (string, beta.ConditionalAccessPolicy, error) {
 	excludeEmergencyAccount(body, emergencyAccount)
 
-	azureTmpl := make(map[string]interface{})
-
-	// Only add non-empty fields
-	if body.Id != "" {
-		azureTmpl["id"] = body.Id
-	}
-	if body.Name != "" {
-		azureTmpl["displayName"] = body.Name
-	}
-	if body.Description != "" {
-		azureTmpl["description"] = body.Description
-	}
-	if body.State != "" {
-		azureTmpl["state"] = body.State
+	azureTmpl := beta.BaseConditionalAccessPolicyImpl{
+		Id:          &body.Id,
+		DisplayName: &body.Name,
+		Description: nullable.Value(body.Description),
+		State:       (*beta.ConditionalAccessPolicyState)(&body.State),
 	}
 
-	grant := make(map[string]interface{})
-	if body.Policy.Action {
-		updateActionCondition(grant, body.Policy.Action, body.Policy.ActionCondition)
-		if len(grant) > 0 {
-			azureTmpl["grantControls"] = grant
-		}
-	}
+	updateActionCondition(azureTmpl.GrantControls, body.Policy.Action, body.Policy.ActionCondition)
 
-	conditions := make(map[string]interface{})
-	if len(body.Policy.Entities) > 0 {
-		updateEntities(conditions, body.Policy.Entities)
-	}
-	if len(body.Policy.Resources) > 0 {
-		updateResources(conditions, body.Policy.Resources)
-	}
-	if len(body.Policy.Conditions) > 0 {
-		updateConditions(conditions, body.Policy.Conditions)
-	}
-	
-	if len(conditions) > 0 {
-		azureTmpl["conditions"] = conditions
-	}
+	updateEntities(azureTmpl.Conditions, body.Policy.Entities)
+	updateResources(azureTmpl.Conditions, body.Policy.Resources)
+	updateConditions(azureTmpl.Conditions, body.Policy.Conditions)
 
-	// Marshal the resulting map into JSON
-	outTmpl, err := json.Marshal(azureTmpl)
-	if err != nil {
-		return "", nil, err
-	}
-
-	return body.Id, outTmpl, nil
+	return body.Id, azureTmpl, nil
 }

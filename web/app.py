@@ -1,5 +1,6 @@
 from flask import Flask, json, jsonify, render_template, redirect, session, url_for, request, make_response, flash
 
+import sys
 import msal
 import time  # Import time module
 import base64
@@ -10,21 +11,33 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-app = Flask(__name__)
-app.secret_key = 'your_secure_secret_key'  # Replace with your Flask app's secret key
+if len(sys.argv) != 2:
+    sys.stderr.write(f"Usage: caa-webserver [listener_port]\n")
+    sys.exit(1)
+port = int(sys.argv[1])
+
+# Check if the app is bundled with PyInstaller
+if getattr(sys, 'frozen', False):  
+    base_path = sys._MEIPASS # Use the temporary folder where the files are extracted
+else:
+    base_path = os.path.abspath(".")
+
+app = Flask(__name__,
+            template_folder=os.path.join(base_path, 'templates'),
+            static_folder=os.path.join(base_path, 'static'))
+app.secret_key = os.getenv('FLASK_SESSION_SECRET')
 
 
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)  # Set session timeout to 60 minutes
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=60)
 
-# Mark the session as permanent for individual users
 @app.before_request
 def make_session_permanent():
     session.permanent = True
 
-CLIENT_ID = os.getenv('CLIENT_ID')
-CLIENT_SECRET = os.getenv('CLIENT_SECRET')
-AUTHORITY = os.getenv('AUTHORITY')
-REDIRECT_URI = 'http://localhost:5000/api/auth/callback'
+CLIENT_ID = os.getenv('AZURE_CLIENT_ID')
+CLIENT_SECRET = os.getenv('AZURE_CLIENT_SECRET')
+AUTHORITY = os.getenv('AZURE_AUTHORITY')
+REDIRECT_URI = os.getenv('AZURE_REDIRECT_URI')
 SCOPE = ['Policy.ReadWrite.ConditionalAccess', 'Policy.Read.All']
 
 
@@ -171,7 +184,7 @@ def fetch_conditional_access():
         else:
             # No response was received (e.g., network error)
             print("No response received:", e)
-            return jsonify({'error': f"Error fetching templates: {str(e)} + Body: {str(body)}"}), 500
+            return jsonify({'error': f"Error fetching templates: {str(e)}"}), 500
 
     response_data = response.json()
 
@@ -186,7 +199,6 @@ def fetch_conditional_access():
       #      except Exception as e:
       #          return jsonify({'error': f"Error decoding template for key '{key}': {str(e)}"}), 500
 
-    print("output: ", response_data)
     return jsonify(response_data)
 
 
@@ -260,7 +272,6 @@ def apply_template():
             return jsonify({'error': f"Error fetching templates: {str(e)}"}), 500
 
     response_data = response.json()
-    print("output: ", response_data)
 
     # Attach the cookie response to extend expiration
     response = jsonify(response_data)
@@ -323,12 +334,10 @@ def destroy():
         else:
             # No response was received (e.g., network error)
             print("No response received:", e)
-            return jsonify({'error': f"Error fetching templates: {str(e)} + Body: {str(body)}"}), 500
+            return jsonify({'error': f"Error fetching templates: {str(e)}"}), 500
 
     response_data = response.json()
 
-
-    print("output: ", response_data)
     return jsonify(response_data)
 
 
@@ -386,4 +395,4 @@ def _save_cache(cache):
     pass
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=port)

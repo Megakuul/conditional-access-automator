@@ -6,8 +6,14 @@
 # Ignore VSCode stuff
 .vscode/**
 
+venv
 .venv
-
 .env
+*.spec
+web/flask_session
+*.exe
+dist
+build
 
-web/flask_session/
+caa_server
+caa_webserver
